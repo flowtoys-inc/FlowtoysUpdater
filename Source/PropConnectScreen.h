@@ -11,7 +11,6 @@
 #pragma once
 
 #include "Screen.h"
-#include "PropUI.h"
 #include "PropManager.h"
 
 class PropConnectScreen : 

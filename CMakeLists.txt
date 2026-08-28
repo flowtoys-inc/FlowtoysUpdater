@@ -65,7 +65,6 @@ target_sources(FlowtoysUpdater PRIVATE
     Source/FirmwareManager.cpp
     Source/Prop.cpp
     Source/PropManager.cpp
-    Source/PropUI.cpp
     Source/Screen.cpp
     Source/ScreenManager.cpp
     Source/PropChooserScreen.cpp
