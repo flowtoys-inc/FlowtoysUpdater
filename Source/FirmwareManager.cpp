@@ -78,6 +78,12 @@ Firmware * FirmwareManager::getFirmwareForFile(File f)
 	const ZipFile::ZipEntry * meta = zip.getEntry("meta");
 	const ZipFile::ZipEntry * data = zip.getEntry("data");
 
+	if (meta == nullptr || data == nullptr)
+	{
+		DBG("INVALID FILE, DELETING");
+		f.deleteFile();
+		return nullptr;
+	}
 
 	//data
 	std::unique_ptr<InputStream> dataStream(zip.createStreamForEntry(*data));
@@ -97,6 +103,12 @@ Firmware * FirmwareManager::getFirmwareForFile(File f)
 
 
 	std::unique_ptr<InputStream> metaStream(zip.createStreamForEntry(*meta));
+	if (metaStream == nullptr)
+	{
+		DBG("INVALID FILE, DELETING");
+		f.deleteFile();
+		return nullptr;
+	}
 	var fwMeta = JSON::fromString(metaStream->readEntireStreamAsString());
 
 	if (!fwMeta.isObject())
