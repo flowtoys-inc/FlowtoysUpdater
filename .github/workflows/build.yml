@@ -51,8 +51,29 @@ jobs:
       - name: Test
         run: ctest --test-dir build --build-config Release --output-on-failure
 
+      # Package inside the runner so unix executable permissions survive:
+      # the artifact store itself strips them, an inner zip preserves them.
+      - name: Package (macOS)
+        if: runner.os == 'macOS'
+        run: ditto -c -k --keepParent build/FlowtoysUpdater_artefacts/Release/FlowtoysUpdater.app FlowtoysUpdater-osx.zip
+
+      - name: Package (Linux)
+        if: runner.os == 'Linux'
+        run: cd build/FlowtoysUpdater_artefacts/Release && zip -r "$GITHUB_WORKSPACE/FlowtoysUpdater-linux.zip" FlowtoysUpdater
+
+      # Also builds the Inno Setup installer, so install.iss is validated on
+      # every PR instead of only at release time.
+      - name: Package (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          $v = (Select-String -Path CMakeLists.txt -Pattern 'project\(FlowtoysUpdater VERSION ([0-9.]+)').Matches[0].Groups[1].Value
+          iscc /DApplicationVersion=$v install.iss
+          Compress-Archive -Path build/FlowtoysUpdater_artefacts/Release/FlowtoysUpdater.exe -DestinationPath FlowtoysUpdater-win-x64.zip
+
       - name: Upload artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: FlowtoysUpdater-${{ runner.os }}
-          path: build/FlowtoysUpdater_artefacts/Release/
+          path: |
+            FlowtoysUpdater-*.zip
+            Output/FlowtoysUpdater-win-x64-*.exe
