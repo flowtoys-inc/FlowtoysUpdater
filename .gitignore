@@ -79,3 +79,7 @@ Builds/LinuxMakefile/FlowtoysUpdater\.AppDir/usr/bin/FlowtoysUpdater
 
 # CMake build output
 /build*/
+
+# Local release/test artifacts
+/FlowtoysUpdater-*.zip
+/FlowtoysUpdater-*.exe
