@@ -59,7 +59,7 @@ void FirmwareChooserScreen::updateVisibility()
 	int indexToSelect = -1;
 	for (int i = 0; i < fwList.size(); i++)
 	{
-		bool isLocal = FirmwareManager::getInstance()->localFirmware.get() == fwList[i];
+		bool isLocal = FirmwareManager::getInstance()->localFirmware == fwList[i];
 		String label = fwList[i]->infos;
 		if (isLocal) label += " (local)";
 #if JUCE_DEBUG && JUCE_WINDOWS
@@ -201,7 +201,7 @@ void FirmwareChooserScreen::buttonClicked(Button* b)
 					int targetHW = -1;
 					if (PropManager::getInstance()->props.size() > 0) targetHW = PropManager::getInstance()->props[0]->hw_rev;
 
-					Firmware* fw = FirmwareManager::getInstance()->localFirmware.get();
+					std::shared_ptr<Firmware> fw = FirmwareManager::getInstance()->localFirmware;
 					bool compatibleHW = fw->isHardwareCompatible(targetHW);
 
 					if (!compatibleHW)
@@ -212,7 +212,7 @@ void FirmwareChooserScreen::buttonClicked(Button* b)
 
 						if (!hwResult)
 						{
-							FirmwareManager::getInstance()->localFirmware.reset(nullptr);
+							FirmwareManager::getInstance()->localFirmware.reset();
 						}
 
 					}

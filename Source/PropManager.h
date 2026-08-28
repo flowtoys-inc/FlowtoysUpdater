@@ -12,6 +12,8 @@
 
 #include "Prop.h"
 
+class Firmware;
+
 class PropManager :
 	public Timer,
 	public Prop::AsyncListener
@@ -36,6 +38,11 @@ public:
 	int selectedRevision;
 
 	bool isFlashing;
+
+	//Holds the firmware being flashed for the whole flash duration, so a
+	//background firmware-list refresh can never free it under the flash
+	//threads (#9).
+	std::shared_ptr<Firmware> flashingFirmware;
 
 	void setSelectedType(PropType t);
 

@@ -26,7 +26,16 @@ UploadScreen::~UploadScreen()
 void UploadScreen::reset()
 {
 	progression = 0;
-	text = "updating with " + FirmwareManager::getInstance()->selectedFirmware->infos + "\n- do not disconnect until complete -";
+
+	std::shared_ptr<Firmware> fw = FirmwareManager::getInstance()->selectedFirmware;
+	if (fw == nullptr)
+	{
+		text = "No firmware selected.\nPlease go back and select a firmware.";
+		repaint();
+		return;
+	}
+
+	text = "updating with " + fw->infos + "\n- do not disconnect until complete -";
 	PropManager::getInstance()->flash();
 }
 
