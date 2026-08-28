@@ -1,0 +1,8 @@
+[submodule "ThirdParty/JUCE"]
+	path = ThirdParty/JUCE
+	url = https://github.com/juce-framework/JUCE.git
+	shallow = true
+[submodule "ThirdParty/hidapi"]
+	path = ThirdParty/hidapi
+	url = https://github.com/libusb/hidapi.git
+	shallow = true

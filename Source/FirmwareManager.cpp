@@ -78,6 +78,12 @@ Firmware * FirmwareManager::getFirmwareForFile(File f)
 	const ZipFile::ZipEntry * meta = zip.getEntry("meta");
 	const ZipFile::ZipEntry * data = zip.getEntry("data");
 
+	if (meta == nullptr || data == nullptr)
+	{
+		DBG("INVALID FILE, DELETING");
+		f.deleteFile();
+		return nullptr;
+	}
 
 	//data
 	std::unique_ptr<InputStream> dataStream(zip.createStreamForEntry(*data));
@@ -97,6 +103,12 @@ Firmware * FirmwareManager::getFirmwareForFile(File f)
 
 
 	std::unique_ptr<InputStream> metaStream(zip.createStreamForEntry(*meta));
+	if (metaStream == nullptr)
+	{
+		DBG("INVALID FILE, DELETING");
+		f.deleteFile();
+		return nullptr;
+	}
 	var fwMeta = JSON::fromString(metaStream->readEntireStreamAsString());
 
 	if (!fwMeta.isObject())
@@ -187,9 +199,10 @@ void FirmwareManager::run()
 	int statusCode = 0;
 
 	URL updateURL(remoteHost + "firmwares.php");
-	std::unique_ptr<InputStream> stream(updateURL.createInputStream(false, nullptr, nullptr, String(),
-		2000, // timeout in millisecs
-		&responseHeaders, &statusCode));
+	std::unique_ptr<InputStream> stream(updateURL.createInputStream(URL::InputStreamOptions(URL::ParameterHandling::inAddress)
+		.withConnectionTimeoutMs(2000)
+		.withResponseHeaders(&responseHeaders)
+		.withStatusCode(&statusCode)));
 #if JUCE_WINDOWS
 	if (statusCode != 200)
 	{
@@ -251,7 +264,7 @@ void FirmwareManager::run()
                         
                         DBG("Downloading " << fURL);
 						URL downloadURL(fURL);
-                        std::unique_ptr<URL::DownloadTask> t = downloadURL.downloadToFile(f, "", this);
+                        std::unique_ptr<URL::DownloadTask> t = downloadURL.downloadToFile(f, URL::DownloadTaskOptions().withListener(this));
                         if(t == nullptr)
                         {
                             DBG("Download errored");
