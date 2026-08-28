@@ -1,0 +1,17 @@
+# Keeps the SHA-pinned GitHub Actions and the ThirdParty/ git submodules
+# (JUCE, hidapi) up to date via automated PRs against modernize.
+# Note: the Catch2 pin in Tests/CMakeLists.txt (CMake FetchContent) is not
+# covered by dependabot and is bumped manually.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    target-branch: modernize
+
+  - package-ecosystem: gitsubmodule
+    directory: /
+    schedule:
+      interval: weekly
+    target-branch: modernize
