@@ -154,7 +154,9 @@ void FirmwareManager::run()
 		.withConnectionTimeoutMs(2000)
 		.withResponseHeaders(&responseHeaders)
 		.withStatusCode(&statusCode)));
-#if JUCE_WINDOWS
+	//Enforced on every platform (was Windows-only, #22): a captive portal or
+	//error page must not reach the JSON parser. A dead connection arrives
+	//here as statusCode 0 and takes the same errored + local-cache path.
 	if (statusCode != 200)
 	{
 		DBG("Failed to connect, status code = " << String(statusCode));
@@ -162,7 +164,6 @@ void FirmwareManager::run()
 		loadFirmwares();
 		return;
 	}
-#endif
 
 	DBG("Firmware updater:: Status code " << statusCode);
 

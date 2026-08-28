@@ -296,13 +296,11 @@ void AppUpdater::finished(URL::DownloadTask * task, bool success)
 
 void AppUpdater::progress(URL::DownloadTask *, int64 bytesDownloaded, int64 totalLength)
 {
-    if(totalLength == -1)
-    {
-#if JUCE_MAC
-        totalLength = 5000000; //around 5Mo to expect for app
-#endif
-    }
-    progression = (float)(bytesDownloaded * 1.0f) / float(totalLength);
+    //No Content-Length header: fall back to a rough size estimate on every
+    //platform (this was mac-only, leaving win/linux with totalLength = -1
+    //and a negative progression, #21).
+    if(totalLength <= 0) totalLength = 10000000; //around 10Mo to expect for app
+    progression = jlimit(0.0f, 1.0f, (float)bytesDownloaded / (float)totalLength);
     DBG("Progress  " << progression << " (" << bytesDownloaded << " / " << totalLength << ")");
     queuedNotifier.addMessage(new AppUpdateEvent(AppUpdateEvent::DOWNLOAD_PROGRESS, progression));
 }
