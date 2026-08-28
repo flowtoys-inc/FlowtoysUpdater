@@ -100,7 +100,7 @@ void AppUpdater::downloadUpdate()
 	URL downloadURL = URL(downloadURLBase + URL::addEscapeChars(downloadingFileName, false));
 
 	DBG("Downloading " + downloadURL.toString(false) + "...");
-	downloadTask = downloadURL.downloadToFile(targetFile, "", this);
+	downloadTask = downloadURL.downloadToFile(targetFile, URL::DownloadTaskOptions().withListener(this));
 
 	if (downloadTask == nullptr)
 	{
@@ -119,9 +119,10 @@ void AppUpdater::run()
 
 	StringPairArray responseHeaders;
 	int statusCode = 0;
-	std::unique_ptr<InputStream> stream(updateURL.createInputStream(false, nullptr, nullptr, String(),
-		2000, // timeout in millisecs
-		&responseHeaders, &statusCode));
+	std::unique_ptr<InputStream> stream(updateURL.createInputStream(URL::InputStreamOptions(URL::ParameterHandling::inAddress)
+		.withConnectionTimeoutMs(2000)
+		.withResponseHeaders(&responseHeaders)
+		.withStatusCode(&statusCode)));
 
 	if (statusCode != 200)
 	{

@@ -187,9 +187,10 @@ void FirmwareManager::run()
 	int statusCode = 0;
 
 	URL updateURL(remoteHost + "firmwares.php");
-	std::unique_ptr<InputStream> stream(updateURL.createInputStream(false, nullptr, nullptr, String(),
-		2000, // timeout in millisecs
-		&responseHeaders, &statusCode));
+	std::unique_ptr<InputStream> stream(updateURL.createInputStream(URL::InputStreamOptions(URL::ParameterHandling::inAddress)
+		.withConnectionTimeoutMs(2000)
+		.withResponseHeaders(&responseHeaders)
+		.withStatusCode(&statusCode)));
 #if JUCE_WINDOWS
 	if (statusCode != 200)
 	{
@@ -251,7 +252,7 @@ void FirmwareManager::run()
                         
                         DBG("Downloading " << fURL);
 						URL downloadURL(fURL);
-                        std::unique_ptr<URL::DownloadTask> t = downloadURL.downloadToFile(f, "", this);
+                        std::unique_ptr<URL::DownloadTask> t = downloadURL.downloadToFile(f, URL::DownloadTaskOptions().withListener(this));
                         if(t == nullptr)
                         {
                             DBG("Download errored");
