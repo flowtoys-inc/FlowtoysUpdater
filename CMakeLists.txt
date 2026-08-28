@@ -96,3 +96,9 @@ target_link_libraries(FlowtoysUpdater PRIVATE
     juce::juce_recommended_config_flags)
 
 juce_generate_juce_header(FlowtoysUpdater)
+
+option(FLOWTOYS_BUILD_TESTS "Build the unit tests" ON)
+if(FLOWTOYS_BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(Tests)
+endif()

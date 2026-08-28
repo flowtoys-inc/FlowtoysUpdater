@@ -74,72 +74,22 @@ Firmware * FirmwareManager::getFirmwareForFile(File f)
 		return nullptr;
 	}
 
-	ZipFile zip(f);
-	const ZipFile::ZipEntry * meta = zip.getEntry("meta");
-	const ZipFile::ZipEntry * data = zip.getEntry("data");
+	FileInputStream fis(f);
+	std::unique_ptr<FirmwareImage> img = fis.openedOk() ? FirmwareImage::parse(fis, DATA_PACKET_MAX_LENGTH) : nullptr;
 
-	if (meta == nullptr || data == nullptr)
+	if (img == nullptr)
 	{
 		DBG("INVALID FILE, DELETING");
 		f.deleteFile();
 		return nullptr;
 	}
 
-	//data
-	std::unique_ptr<InputStream> dataStream(zip.createStreamForEntry(*data));
-	if (dataStream == nullptr)
-	{
-		DBG("INVALID FILE, DELETING");
-		f.deleteFile(); 
-		return nullptr;
-	}
-
-	int numBytesToSend = (int)dataStream->getTotalLength();
-	float numDataPackets = (float)(ceilf(numBytesToSend*1.0f / DATA_PACKET_MAX_LENGTH));
-	int totalBytesToSend = (int)(numDataPackets * DATA_PACKET_MAX_LENGTH);
-	//DBG("File size : " << numBytesToSend << ", split into " << numDataPackets << " =  " << totalBytesToSend << " total bytes");
-	MemoryBlock fwData;
-	dataStream->readIntoMemoryBlock(fwData);
-
-
-	std::unique_ptr<InputStream> metaStream(zip.createStreamForEntry(*meta));
-	if (metaStream == nullptr)
-	{
-		DBG("INVALID FILE, DELETING");
-		f.deleteFile();
-		return nullptr;
-	}
-	var fwMeta = JSON::fromString(metaStream->readEntireStreamAsString());
-
-	if (!fwMeta.isObject())
-	{
-		DBG("Problem with meta here");
-		f.deleteFile(); 
-		return nullptr;
-	}
-
-	//DBG("Got firmware : " << JSON::toString(fwMeta));
-
-	int targetVID = (int)fwMeta.getProperty("usb_vid", 0);
-	int targetPID = (int)fwMeta.getProperty("usb_pid", 0);
-	uint16 fwRev = (uint16)(int)fwMeta.getProperty("fw_rev", 0);
-	int hwRev = (int)fwMeta.getProperty("hw_rev", 0);
-	String targetVersion = String(fwRev >> 8) + "." + String(fwRev & 0xff);
-	String fwDate = Time((int64)((int64)fwMeta.getDynamicObject()->getProperty("fw_date")) * 1000).toString(true, false);
-	String gitRev = fwMeta.getProperty("git_rev", "[not set]");
-	String fwIdent = fwMeta.getProperty("fw_ident", "[not set]");
-
-	String fwInfos = fwIdent + ", version " + targetVersion + " (" + fwDate + ")";
-	Firmware * fw = new Firmware(fwData, totalBytesToSend, fwMeta, f.getFileNameWithoutExtension(), targetVersion, targetVersion.getFloatValue(), hwRev, targetPID, targetVID);
-	
-	//DBG("Firmware : " << String::toHexString(fw->hwRev) << " : " << Firmware::getHwRevNameforHwRev(fw->hwRev));
+	Firmware * fw = new Firmware(img->data, img->totalBytesToSend, img->meta, f.getFileNameWithoutExtension(), img->versionString, img->version, img->hwRev, img->pid, img->vid);
 
 	for (int i = 0; i < TYPE_MAX; i++)
 	{
-		if (productIds[i] == targetPID) fw->type = (PropType)i;
+		if (productIds[i] == img->pid) fw->type = (PropType)i;
 	}
-
-
 
 	return fw;
 }
@@ -164,6 +114,7 @@ bool FirmwareManager::setLocalFirmware(File f, PropType expectedType)
 
 float FirmwareManager::getFirmwaresProgress()
 {
+	if (firmwareProgress.isEmpty()) return 0;
 	float p = 0;
 	for (auto& fp : firmwareProgress) p += fp;
 	p /= firmwareProgress.size();
@@ -183,7 +134,7 @@ Array<Firmware *> FirmwareManager::getFirmwaresForType(PropType type, int hardwa
 	int targetPID = productIds[type];
 	for (auto &f : firmwares)
 	{
-		if (f->pid == targetPID && (hardwareRevision == -1 || hardwareRevision == f->version)) result.add(f);
+		if (f->pid == targetPID && (hardwareRevision == -1 || hardwareRevision == f->hwRev)) result.add(f);
 	}
 
 	if (localFirmware != nullptr && localFirmware->type == type) result.add(localFirmware.get());
@@ -297,7 +248,7 @@ void FirmwareManager::run()
 void FirmwareManager::progress (URL::DownloadTask* t , int64 downloaded, int64 total)
 {
     DBG("Progress !");
-	float p = downloaded / total;
+	float p = total > 0 ? (float)downloaded / (float)total : 0.0f;
 	int index = tasks.indexOf(t);
 	firmwareProgress.set(index, p);
 	queuedNotifier.addMessage(new FirmwareManagerEvent(FirmwareManagerEvent::FIRMWARE_LOAD_PROGRESS));

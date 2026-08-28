@@ -164,13 +164,7 @@ void PropManager::timerCallback()
 //Constants
 
 PropType PropManager::getTypeForProductID(int productID) {
-	switch (productID)
-	{
-	case 0x1000: return CAPSULE;
-	case 0x1001: return CLUB;
-	}
-
-	return CAPSULE;
+	return propTypeForProductID(productID);
 }
 
 void PropManager::newMessage(const Prop::PropEvent & e)
