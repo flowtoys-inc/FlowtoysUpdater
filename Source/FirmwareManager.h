@@ -50,7 +50,7 @@ class FirmwareComparator
 {
 public:
 	FirmwareComparator() {}
-	int compareElements(Firmware * f1, Firmware * f2)
+	int compareElements(const std::shared_ptr<Firmware>& f1, const std::shared_ptr<Firmware>& f2)
 	{
 		//inverse order, we want the latest first. Compares dotted segments,
 		//not the legacy float (where "1.10" sorted below "1.7").
@@ -75,16 +75,18 @@ public:
 	File firmwareFolder;
     OwnedArray<URL::DownloadTask> tasks;
 
-	Firmware * selectedFirmware;
+	//shared_ptr everywhere: the hourly refresh clears the list from the
+	//background thread while the UI (and a running flash) may still hold
+	//entries — shared ownership keeps them alive (#9).
+	std::shared_ptr<Firmware> selectedFirmware;
 
-
-	std::unique_ptr<Firmware> localFirmware;
+	std::shared_ptr<Firmware> localFirmware;
 
 	void initLoad();
 	void clearFirmwares();
 	void loadFirmwares();
 
-	Firmware * getFirmwareForFile(File f);
+	std::shared_ptr<Firmware> getFirmwareForFile(File f);
 	bool setLocalFirmware(File f, PropType expectedType);
 
 	Array<float> firmwareProgress;
@@ -95,8 +97,9 @@ public:
 	float getFirmwaresProgress();
 	bool firmwaresAreLoaded();
 
-	OwnedArray<Firmware> firmwares;
-	Array<Firmware*> getFirmwaresForType(PropType type, int hardwareRevision);
+	CriticalSection firmwaresLock; //guards firmwares (mutated on the bg thread, read on the message thread)
+	Array<std::shared_ptr<Firmware>> firmwares;
+	Array<std::shared_ptr<Firmware>> getFirmwaresForType(PropType type, int hardwareRevision);
 
 	virtual void run() override;
 

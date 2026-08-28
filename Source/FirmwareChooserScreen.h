@@ -23,7 +23,7 @@ public:
 	FirmwareChooserScreen();
 	~FirmwareChooserScreen();
 
-	Array<Firmware *> fwList;
+	Array<std::shared_ptr<Firmware>> fwList; //shared: keeps entries alive across list refreshes (#9)
 	ComboBox fwChooser;
 
 	TextButton selectBT;

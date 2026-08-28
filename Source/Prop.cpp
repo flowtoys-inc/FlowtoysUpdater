@@ -51,8 +51,9 @@ Prop::Prop(StringRef productString, StringRef serial, hid_device * device, PropT
 
 Prop::~Prop()
 {
-	signalThreadShouldExit();
-	waitForThreadToExit(100);
+	//Reads now time out (see readResponse), so the thread exits promptly on
+	//the signal; only close the handle once the thread is really gone (#10).
+	stopThread(3000);
 	hid_close(device);
 }
 
@@ -102,6 +103,8 @@ void Prop::sendGetStatus()
 
 	if (result != nullptr)
 	{
+		numNoResponses = 0; //only *consecutive* misses count towards a disconnect
+
 		uint8_t cmd = result->readByte();
 		for (int i = 0; i < 3; i++) result->readByte(); //2 useless bytes
 		deviceAckStatus = result->readInt();
@@ -223,7 +226,11 @@ MemoryInputStream * Prop::readResponse()
 	}
 
 	unsigned char response[PACKET_SIZE];
-	int numRead = hid_read(device, response, PACKET_SIZE);
+	//Bounded read: a silent device must not hang the calling thread forever
+	//(the old blocking hid_read did exactly that on macOS, #10). The 1s
+	//timeout combined with the 20-consecutive-misses rule in sendGetStatus
+	//gives a device ~20s of total silence before it is declared gone.
+	int numRead = hid_read_timeout(device, response, PACKET_SIZE, 1000);
 
 	//DBG("Read " << numRead << " bytes read");
 
@@ -241,8 +248,7 @@ MemoryInputStream * Prop::readResponse()
 
 void Prop::flash(MemoryBlock * _dataBlock, int _totalBytesToSend)
 {
-	signalThreadShouldExit();
-	waitForThreadToExit(100);
+	stopThread(3000);
 
 	this->dataBlock= _dataBlock;
 	this->totalBytesToSend = _totalBytesToSend;
@@ -266,11 +272,23 @@ void Prop::run()
 	{
 		sendReset();
 
-		while (deviceStatus != Idle)
+		//Bounded: a device that never reaches Idle used to spin here forever (#10).
+		while (deviceStatus != Idle && !threadShouldExit())
 		{
 			sleep(10);
 			sendGetStatus();
+
+			if (deviceStatus == Error)
+			{
+				DBG("ERROR while waiting for Idle: " << statusRawMessage);
+				progression = 0;
+				isFlashing = false;
+				queuedNotifier.addMessage(new PropEvent(this, PropEvent::FLASH_ERROR, progression));
+				return;
+			}
 		}
+
+		if (threadShouldExit()) { isFlashing = false; return; }
 	}
 
 	sendUpdate(totalBytesToSend);
@@ -309,15 +327,13 @@ void Prop::run()
 		}
 
 		DBG(deviceAckStatus);
+		//No MessageManagerLock here: the notifier already delivers to the
+		//message thread, and holding the lock while the message thread waits
+		//in stopThread() was a deadlock (#10).
 		if (deviceAckStatus > 0)
 		{
-			MessageManagerLock mmLock;
-			if (mmLock.lockWasGained())
-			{
-				setProgression(jmin(deviceAckStatus * .5f / sizeToErase, .5f));
-				//progression->queuedNotifier.triggerAsyncUpdate();
-				sleep(2);
-			}
+			float newProgression = jmin(deviceAckStatus * .5f / sizeToErase, .5f);
+			if (newProgression - progression >= 0.005f) setProgression(newProgression);
 		}
 		index++;
 	}
@@ -362,14 +378,8 @@ void Prop::run()
 
 		if (currentPacket % 10 == 0)
 		{
-			MessageManagerLock mmLock;
-			if (mmLock.lockWasGained())
-			{
-				DBG("Progression : " << progression);
-				setProgression(.5f + deviceAckStatus * .5f / totalBytesToSend);
-				//progression->queuedNotifier.triggerAsyncUpdate();
-				sleep(5);
-			}
+			DBG("Progression : " << progression);
+			setProgression(.5f + deviceAckStatus * .5f / totalBytesToSend);
 		}
 	}
 

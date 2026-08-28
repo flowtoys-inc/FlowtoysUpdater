@@ -197,6 +197,8 @@ void PropManager::newMessage(const Prop::PropEvent & e)
 
 void PropManager::computeProgression()
 {
+	if (props.isEmpty()) return; //avoid dividing by zero below
+
 	float totalProgression = 0;
 	int numSuccess = 0;
 	int numErrorred = 0;
@@ -223,6 +225,7 @@ void PropManager::computeProgression()
 	{
 		queuedNotifier.addMessage(new PropManagerEvent(PropManagerEvent::FLASHING_FINISHED, totalProgression, numSuccess, numErrorred));
 		isFlashing = false;
+		flashingFirmware.reset(); //flash done, firmware no longer needs pinning (#9)
 	}
 }
 
@@ -239,6 +242,7 @@ void PropManager::resetPropToBootloader(hid_device_info * deviceInfo)
 		while (data.getDataSize() < PACKET_SIZE + 1) data.writeByte(0); //prepend report id
 
 		hid_write(d, (const unsigned char *)data.getData(), data.getDataSize());
+		hid_close(d); //this leaked a handle per 100ms poll tick (#10)
 	} else
 	{
 		DBG("Could not open device");
@@ -251,7 +255,16 @@ void PropManager::flash()
 		DBG("Nothing to flash");
 		return;
 	}
-	
+
+	std::shared_ptr<Firmware> f = FirmwareManager::getInstance()->selectedFirmware;
+	if (f == nullptr)
+	{
+		DBG("No firmware selected, not flashing");
+		return;
+	}
+
+	flashingFirmware = f; //keep alive until FLASHING_FINISHED (#9)
+
 	isFlashing = true;
 
 	flashProgresses.clear();
@@ -264,10 +277,8 @@ void PropManager::flash()
 		flashSuccess.add(false);
 		processedFlashes.add(false);
 
-		Firmware* f = FirmwareManager::getInstance()->selectedFirmware;
-
 		DBG("Flashing device " << d->infos);
-		d->flash(&f->data, f->totalBytesToSend);
+		d->flash(&flashingFirmware->data, flashingFirmware->totalBytesToSend);
 	}
 
 }

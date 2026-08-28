@@ -34,7 +34,7 @@ FirmwareManager::~FirmwareManager()
 
 void FirmwareManager::initLoad()
 {
-	startThread();
+	if (!isThreadRunning()) startThread();
 }
 
 void FirmwareManager::clearFirmwares()
@@ -46,26 +46,30 @@ void FirmwareManager::clearFirmwares()
 
 void FirmwareManager::loadFirmwares()
 {
-	firmwares.clear();
-
 	DBG("Loading firmwares");
 	Array<File> files = firmwareFolder.findChildFiles(File::TypesOfFileToFind::findFiles, false, "*.fwimg");
-    
+
     files.sort();
-    
+
+	Array<std::shared_ptr<Firmware>> newFirmwares;
 	for (auto &f : files)
 	{
-		Firmware * fw = getFirmwareForFile(f);
-		if(fw != nullptr) firmwares.add(fw);
+		std::shared_ptr<Firmware> fw = getFirmwareForFile(f);
+		if(fw != nullptr) newFirmwares.add(fw);
 	}
 
-	firmwares.sort(comparator, true);
+	newFirmwares.sort(comparator, true);
+
+	{
+		const ScopedLock sl(firmwaresLock);
+		firmwares.swapWith(newFirmwares);
+	}
 
 	DBG(firmwares.size() << " loaded.");
 	queuedNotifier.addMessage(new FirmwareManagerEvent(FirmwareManagerEvent::FIRMWARE_LOADED));
 }
 
-Firmware * FirmwareManager::getFirmwareForFile(File f)
+std::shared_ptr<Firmware> FirmwareManager::getFirmwareForFile(File f)
 {
 	if (f.getSize() == 0)
 	{
@@ -84,7 +88,7 @@ Firmware * FirmwareManager::getFirmwareForFile(File f)
 		return nullptr;
 	}
 
-	Firmware * fw = new Firmware(img->data, img->totalBytesToSend, img->meta, f.getFileNameWithoutExtension(), img->versionString, img->version, img->hwRev, img->pid, img->vid);
+	std::shared_ptr<Firmware> fw = std::make_shared<Firmware>(img->data, img->totalBytesToSend, img->meta, f.getFileNameWithoutExtension(), img->versionString, img->version, img->hwRev, img->pid, img->vid);
 
 	for (int i = 0; i < TYPE_MAX; i++)
 	{
@@ -96,20 +100,12 @@ Firmware * FirmwareManager::getFirmwareForFile(File f)
 
 bool FirmwareManager::setLocalFirmware(File f, PropType expectedType)
 {
-	Firmware * fw = getFirmwareForFile(f);
-	if (fw == nullptr)
-	{
-		delete fw;
-		return false;
-	}
-	if (fw->type != expectedType)
-	{
-		delete fw;
-		return false;
-	}
+	std::shared_ptr<Firmware> fw = getFirmwareForFile(f);
+	if (fw == nullptr) return false;
+	if (fw->type != expectedType) return false;
 
-	localFirmware.reset(fw);
-	return fw != nullptr;
+	localFirmware = fw;
+	return true;
 }
 
 float FirmwareManager::getFirmwaresProgress()
@@ -123,21 +119,25 @@ float FirmwareManager::getFirmwaresProgress()
 
 bool FirmwareManager::firmwaresAreLoaded()
 {
+	const ScopedLock sl(firmwaresLock);
 	return firmwares.size() > 0;
 }
 
-Array<Firmware *> FirmwareManager::getFirmwaresForType(PropType type, int hardwareRevision)
+Array<std::shared_ptr<Firmware>> FirmwareManager::getFirmwaresForType(PropType type, int hardwareRevision)
 {
-	Array<Firmware *> result;
+	Array<std::shared_ptr<Firmware>> result;
 	if (type == NOTSET) return result;
 
 	int targetPID = productIds[type];
-	for (auto &f : firmwares)
 	{
-		if (f->pid == targetPID && (hardwareRevision == -1 || hardwareRevision == f->hwRev)) result.add(f);
+		const ScopedLock sl(firmwaresLock);
+		for (auto &f : firmwares)
+		{
+			if (f->pid == targetPID && (hardwareRevision == -1 || hardwareRevision == f->hwRev)) result.add(f);
+		}
 	}
 
-	if (localFirmware != nullptr && localFirmware->type == type) result.add(localFirmware.get());
+	if (localFirmware != nullptr && localFirmware->type == type) result.add(localFirmware);
 
 	return result;
 }
@@ -191,7 +191,7 @@ void FirmwareManager::run()
 					bool fileExistAndIsValid = false;
 					if (f.existsAsFile() && f.getSize() > 0)
 					{
-						std::unique_ptr<Firmware> fw(getFirmwareForFile(f));
+						std::shared_ptr<Firmware> fw = getFirmwareForFile(f);
 						if (fw != nullptr)
 						{
 							DBG("File already downloaded and valid : "+f.getFileName());
@@ -282,5 +282,5 @@ void FirmwareManager::finished(URL::DownloadTask * t, bool success)
 
 void FirmwareManager::timerCallback()
 {
-	startThread();
+	if (!isThreadRunning()) startThread();
 }
