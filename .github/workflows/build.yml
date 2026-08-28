@@ -1,0 +1,55 @@
+name: Build
+
+on:
+  push:
+    branches: [modernize, master]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macOS
+            os: macos-15
+            cmake_flags: -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
+          - name: Windows
+            os: windows-2022
+            cmake_flags: ""
+          # Oldest supported runner on purpose: the shipped binary links the
+          # build machine's glibc, and glibc only works forward — building on
+          # a newer image would exclude users on older distros. Bump only when
+          # GitHub retires the image (or move to a container build).
+          - name: Linux
+            os: ubuntu-22.04
+            cmake_flags: ""
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: recursive
+
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libfreetype-dev libfontconfig1-dev \
+            libx11-dev libxinerama-dev libxrandr-dev libxcursor-dev libxcomposite-dev libxext-dev \
+            libcurl4-openssl-dev libasound2-dev \
+            libusb-1.0-0-dev libudev-dev
+
+      - name: Configure
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release ${{ matrix.cmake_flags }}
+
+      - name: Build
+        run: cmake --build build --config Release --parallel
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: FlowtoysUpdater-${{ runner.os }}
+          path: build/FlowtoysUpdater_artefacts/Release/
