@@ -1,4 +1,5 @@
 #include "AppUpdater.h"
+#include "VersionUtils.h"
 /*
   ==============================================================================
 
@@ -43,18 +44,7 @@ void AppUpdater::setURLs(URL _updateURL, String _downloadURLBase, String _filePr
 
 String AppUpdater::getDownloadFileName(String version, String extension)
 {
-	String fileURL = filePrefix + "-";
-#if JUCE_WINDOWS
-	fileURL += "win-x64";
-#elif JUCE_MAC
-	fileURL += "osx";
-#elif JUCE_LINUX
-	fileURL += "linux";
-#endif
-
-	fileURL += "-" + version + "." + extension;
-
-	return fileURL;
+	return VersionUtils::downloadFileName(filePrefix, VersionUtils::platformOSSuffix(), version, extension);
 }
 
 void AppUpdater::checkForUpdates()
@@ -157,11 +147,11 @@ If the auto-update fails, you can always download and replace it manually.";
 				Array<var> * changelog = data.getProperty("changelog", var()).getArray();
 				String changelogString = "Changes since your version :\n\n";
 				changelogString += "Version " + version + ":\n";
-				for (auto &c : *changelog) changelogString += c.toString() + "\n";
+				if (changelog != nullptr) for (auto &c : *changelog) changelogString += c.toString() + "\n";
 				changelogString += "\n\n";
 
 				Array<var> * oldChangelogs = data.getProperty("archives", var()).getArray();
-				for (int i = oldChangelogs->size() - 1; i >= 0; i--)
+				if (oldChangelogs != nullptr) for (int i = oldChangelogs->size() - 1; i >= 0; i--)
 				{
 					var ch = oldChangelogs->getUnchecked(i);
 					String chVersion = ch.getProperty("version", "1.0.0");
@@ -169,7 +159,7 @@ If the auto-update fails, you can always download and replace it manually.";
 
 					changelogString += "Version " + chVersion + ":\n";
 					Array<var> * versionChangelog = ch.getProperty("changelog", var()).getArray();
-					for (auto &c : *versionChangelog) changelogString += c.toString() + "\n";
+					if (versionChangelog != nullptr) for (auto &c : *versionChangelog) changelogString += c.toString() + "\n";
 					changelogString += "\n\n";
 				}
 
@@ -453,24 +443,5 @@ void UpdateDialogWindow::buttonClicked(Button * b)
 
 bool AppUpdater::versionIsNewerThan(String versionToCheck, String referenceVersion)
 {
-	StringArray fileVersionSplit;
-	fileVersionSplit.addTokens(versionToCheck, juce::StringRef("."), juce::StringRef("\""));
-
-	StringArray minVersionSplit;
-	minVersionSplit.addTokens(referenceVersion, juce::StringRef("."), juce::StringRef("\""));
-
-	int maxVersionNumbers = jmax<int>(fileVersionSplit.size(), minVersionSplit.size());
-	while (fileVersionSplit.size() < maxVersionNumbers) fileVersionSplit.add("0");
-	while (minVersionSplit.size() < maxVersionNumbers) minVersionSplit.add("0");
-
-	for (int i = 0; i < maxVersionNumbers; i++)
-	{
-		int fV = fileVersionSplit[i].getIntValue();
-		int minV = minVersionSplit[i].getIntValue();
-		if (fV > minV) return true;
-		else if (fV < minV) return false;
-	}
-
-	//if equals return false
-	return false;
+	return VersionUtils::versionIsNewerThan(versionToCheck, referenceVersion);
 }

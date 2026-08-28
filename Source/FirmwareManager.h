@@ -12,6 +12,8 @@
 #include "JuceHeader.h"
 #include "PropConstants.h"
 #include "QueuedNotifier.h"
+#include "FirmwareImage.h"
+#include "VersionUtils.h"
 
 class Firmware
 {
@@ -31,33 +33,16 @@ public:
 	float version;
 	int pid;
 	int vid;
-	PropType type;
+	PropType type = NOTSET;
 
 	static String getHwRevNameforHwRev(int hwRev)
 	{
-		switch (hwRev)
-		{
-		case 0: return "notset";
-		case 0x300: return "C";
-		case 0x400: return "D";
-		case 0x500: return "E";
-		case 0x600: return "F";
-		case 0x700: return "G";
-		case 0x800: return "H";
-		}
-
-		return "unknown";
+		return FirmwareImage::getHwRevNameforHwRev(hwRev);
 	}
 
 	bool isHardwareCompatible(int hardwareRev)
 	{
-		if (type == CAPSULE)
-		{
-			if (hardwareRev == 0x400 && hwRev == 0x300) return true;
-			if (hardwareRev == 0x300 && hwRev == 0x400) return true;
-		}
-
-		return hardwareRev == hwRev;
+		return FirmwareImage::isHardwareRevCompatible(hwRev, hardwareRev, type == CAPSULE);
 	}
 };
 
@@ -67,7 +52,9 @@ public:
 	FirmwareComparator() {}
 	int compareElements(Firmware * f1, Firmware * f2)
 	{
-		return f1->version > f2->version ? -1 : (f1->version < f2->version ? 1 : 0); //inverse order, we want the latest first
+		//inverse order, we want the latest first. Compares dotted segments,
+		//not the legacy float (where "1.10" sorted below "1.7").
+		return VersionUtils::compareVersionsDescending(f1->versionString, f2->versionString);
 	}
 };
 
