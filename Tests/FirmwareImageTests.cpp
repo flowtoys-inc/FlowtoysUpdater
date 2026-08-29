@@ -10,7 +10,7 @@ static juce::MemoryBlock buildZip(const std::vector<std::pair<juce::String, juce
 	for (auto& e : entries)
 	{
 		auto content = e.second.toRawUTF8();
-		builder.addEntry(new juce::MemoryInputStream(content, strlen(content), true),
+		builder.addEntry(std::make_unique<juce::MemoryInputStream>(content, strlen(content), true),
 		                 5, e.first, juce::Time());
 	}
 
