@@ -53,9 +53,15 @@ jobs:
 
       # Package inside the runner so unix executable permissions survive:
       # the artifact store itself strips them, an inner zip preserves them.
+      # The build only leaves a linker-generated ad-hoc signature on the
+      # executable; without a sealed bundle signature, quarantined downloads
+      # are killed at launch on newer macOS (#24). Seal it ad-hoc.
       - name: Package (macOS)
         if: runner.os == 'macOS'
-        run: ditto -c -k --keepParent build/FlowtoysUpdater_artefacts/Release/FlowtoysUpdater.app FlowtoysUpdater-osx.zip
+        run: |
+          codesign --force --deep --sign - build/FlowtoysUpdater_artefacts/Release/FlowtoysUpdater.app
+          codesign --verify --deep --strict build/FlowtoysUpdater_artefacts/Release/FlowtoysUpdater.app
+          ditto -c -k --keepParent build/FlowtoysUpdater_artefacts/Release/FlowtoysUpdater.app FlowtoysUpdater-osx.zip
 
       - name: Package (Linux)
         if: runner.os == 'Linux'
