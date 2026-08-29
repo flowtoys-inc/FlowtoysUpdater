@@ -16,6 +16,13 @@ endif()
 
 add_subdirectory(ThirdParty/JUCE)
 
+# Everything links statically. hidapi in particular builds a shared library
+# by default, which left the app referencing @rpath/libhidapi.0.dylib inside
+# the *builder's* build tree - launching fine on the build machine and dying
+# in dyld everywhere else (#24). Static linking ships zero runtime deps,
+# like the 1.1.9 releases did.
+set(BUILD_SHARED_LIBS OFF)
+
 set(HIDAPI_BUILD_HIDTEST OFF CACHE BOOL "" FORCE)
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     # The libusb backend matches what shipped historically (the vendored

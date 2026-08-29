@@ -78,6 +78,12 @@ jobs:
       - name: Package zip and pkg
         run: |
           V="$GITHUB_REF_NAME"
+          if [ "$HAVE_SIGNING" != "true" ]; then
+            # No Developer ID: seal the bundle with an ad-hoc signature, or
+            # quarantined downloads get killed at launch on newer macOS (#24).
+            codesign --force --deep --sign - "$APP"
+          fi
+          codesign --verify --deep --strict "$APP"
           ditto -c -k --keepParent "$APP" "FlowtoysUpdater-osx-$V.zip"
           # Same postinstall auto-launch behavior as the old Packages.app pkg.
           mkdir -p pkg-scripts
