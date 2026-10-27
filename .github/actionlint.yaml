@@ -1,0 +1,7 @@
+# actionlint 1.7.12 (the latest release) predates GitHub's ubuntu-26.04 runner
+# images, which are GA. Declare them here so the label check passes; delete
+# this file once an actionlint release knows them.
+self-hosted-runner:
+  labels:
+    - ubuntu-26.04
+    - ubuntu-26.04-arm
