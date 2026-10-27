@@ -78,8 +78,27 @@ ctest --test-dir build --output-on-failure
 
 Pass `-DFLOWTOYS_BUILD_TESTS=OFF` at configure time to skip the test target entirely.
 
+## Warnings and formatting
+
+`-Wall -Wextra` (`/W4` on MSVC) are always on for the app and the tests. CI also passes `-DFLOWTOYS_WARNINGS_AS_ERRORS=ON`, which adds `-Werror` (`/WX`); use it locally before pushing:
+
+```bash
+cmake -B build -DCMAKE_BUILD_TYPE=Release -DFLOWTOYS_WARNINGS_AS_ERRORS=ON
+```
+
+It is off by default so a newer compiler's new warnings never break a user's build. Deprecations inside JUCE that a new macOS SDK introduces stay warnings even with it on.
+
+Code is formatted with clang-format, using the committed `.clang-format` (tabs, Allman braces) at the version CI pins:
+
+```bash
+uvx clang-format@23.1.3 -i Source/*.cpp Source/*.h Tests/*.cpp    # or: pipx run clang-format==23.1.3 ...
+```
+
+CI fails the `clang-format` job if a file would change.
+
 ## Build options / conventions
 
-- The app version lives in exactly one place: `project(FlowtoysUpdater VERSION x.y.z)` in the root `CMakeLists.txt`. Release tags must match it (CI enforces this — see [RELEASING.md](RELEASING.md)).
+- The app version lives in exactly one place: `project(FlowtoysUpdater VERSION x.y.z)` in the root `CMakeLists.txt`. release-please bumps it; release tags (`vx.y.z`) must match it (CI enforces this — see [RELEASING.md](RELEASING.md)).
 - Do **not** compile `Source/hid.c` / `Source/hid_osx.c` if you find them in an old checkout — the hidapi submodule replaces them.
-- CI builds run on every PR (`.github/workflows/build.yml`): macOS universal, Windows, Linux.
+- CI builds run on every PR (`.github/workflows/build.yml`): clang-format, then macOS universal (`macos-26`), Windows (`windows-2025`), Linux on `ubuntu-26.04` for the newest compiler, and Linux inside an `ubuntu:22.04` container. That last one is the build that ships, because a binary only runs on glibc versions at least as new as the one it was built against.
+- Every PR also runs `.github/workflows/pr-checks.yml`: the PR title must be a [Conventional Commit](https://www.conventionalcommits.org/), and TruffleHog scans the commits for secrets.

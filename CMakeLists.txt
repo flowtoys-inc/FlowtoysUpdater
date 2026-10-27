@@ -5,7 +5,8 @@ set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
 
 # Single source of truth for the app version. A release tag must match this
 # exactly, or the in-app self-updater will never find the published artifact.
-project(FlowtoysUpdater VERSION 1.2.0 LANGUAGES C CXX)
+# release-please bumps it (the marker below); never edit it by hand.
+project(FlowtoysUpdater VERSION 1.2.0 LANGUAGES C CXX) # x-release-please-version
 
 set(CMAKE_OSX_DEPLOYMENT_TARGET "10.13" CACHE STRING "Minimum macOS version")
 

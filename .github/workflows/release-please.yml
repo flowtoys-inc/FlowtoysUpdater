@@ -1,0 +1,58 @@
+# Keeps a "chore(master): release x.y.z" PR open that bumps the version in
+# CMakeLists.txt and CHANGELOG.md from Conventional Commits. Merging it tags
+# vX.Y.Z and creates the GitHub Release; release.yml then builds, signs and
+# attaches the binaries. Needs the repo setting that lets Actions create PRs.
+#
+# The release-please job is an inlined copy of flowtoys-inc/dev-standards'
+# reusable release-please.yml (this public repo can't call the private
+# dev-standards workflows). Once dev-standards is public, replace it with:
+#
+#   release-please:
+#     uses: flowtoys-inc/dev-standards/.github/workflows/release-please.yml@<sha> # vX.Y.Z
+name: Release Please
+
+on:
+  push:
+    branches: [master]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  release-please:
+    name: release-please
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+    steps:
+      - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        id: release
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+  # A tag pushed with GITHUB_TOKEN triggers no workflows, so the release
+  # build is called directly rather than on the tag.
+  release:
+    needs: release-please
+    if: needs.release-please.outputs.release_created == 'true'
+    permissions:
+      contents: write
+    uses: ./.github/workflows/release.yml
+    with:
+      tag: ${{ needs.release-please.outputs.tag_name }}
+    secrets:
+      MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
+      MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+      NOTARY_APPLE_ID: ${{ secrets.NOTARY_APPLE_ID }}
+      NOTARY_PASSWORD: ${{ secrets.NOTARY_PASSWORD }}
+      NOTARY_TEAM_ID: ${{ secrets.NOTARY_TEAM_ID }}

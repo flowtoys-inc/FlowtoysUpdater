@@ -1,6 +1,6 @@
 # Releasing FlowtoysUpdater
 
-A release is: a version bump, a git tag, CI-built artifacts on GitHub Releases, and (for existing users to auto-update) a manual publish to flow-toys.com. This document is the full checklist.
+A release is: a version bump, a git tag, CI-built artifacts on GitHub Releases, and (for existing users to auto-update) a manual publish to flow-toys.com. [release-please](https://github.com/googleapis/release-please) does the first three from Conventional Commit PR titles. This document is the full checklist.
 
 ## The artifact naming contract
 
@@ -12,19 +12,19 @@ FlowtoysUpdater-<os>-<version>.<extension>
       extension = whatever update.json declares (zip by default)
 ```
 
-Every part of the pipeline — the CMake project version, the git tag, the CI artifact names, and the server's `update.json` — must agree on `<version>`, or shipped apps will look for a file that doesn't exist. CI enforces tag == CMake version; the rest of this checklist covers what CI can't reach.
+Every part of the pipeline — the CMake project version, the git tag, the CI artifact names, and the server's `update.json` — must agree on `<version>`, or shipped apps will look for a file that doesn't exist. CI enforces tag == CMake version (the tag is `v<version>`); the rest of this checklist covers what CI can't reach.
 
 ## Release checklist
 
-1. **Bump the version** in `CMakeLists.txt`: `project(FlowtoysUpdater VERSION x.y.z)`. Land that on `modernize`/`master` via PR.
-2. **Dry run** the release from the commit you're about to tag: Actions → Release → Run workflow, pick the branch. It builds, signs and notarizes exactly like a tagged release (named with the CMake version) but only keeps the files as workflow artifacts — no tag check, no GitHub Release. Download `release-macos` and run the [verification checks](#verifying-a-signed-build) on it. Do this after any change to signing secrets or the workflow.
-3. **Tag** the release commit: `git tag x.y.z && git push origin x.y.z`.
-4. CI (`.github/workflows/release.yml`) then:
+1. **Land changes on `master`** with Conventional Commit PR titles (`feat: …`, `fix: …`). PRs are squash-merged, so the title is the commit release-please reads. `feat` bumps the minor version, `fix` the patch, and `!` / `BREAKING CHANGE:` the major.
+2. **release-please** (`.github/workflows/release-please.yml`) keeps a `chore(master): release x.y.z` PR open. It bumps the version in `CMakeLists.txt` (the line marked `# x-release-please-version`) and updates `CHANGELOG.md`. Never edit those, or `.release-please-manifest.json`, by hand. Release PRs get no CI, because release-please opens them with `GITHUB_TOKEN`.
+3. **Dry run** the release from the release PR's branch: Actions → Release → Run workflow, pick the branch. It builds, signs and notarizes exactly like a real release (named with the CMake version) but only keeps the files as workflow artifacts — no tag check, no GitHub Release. Download `release-macos` and run the [verification checks](#verifying-a-signed-build) on it. Do this after any change to signing secrets or the workflow.
+4. **Merge the release PR.** release-please tags `vx.y.z` and creates the GitHub Release with the changelog. It then calls `.github/workflows/release.yml` directly, because a tag pushed with `GITHUB_TOKEN` triggers no workflows. Tags pushed by hand trigger nothing. That workflow:
    - verifies the tag matches the CMake version (hard failure if not),
    - builds macOS (universal arm64+x86_64), Windows (x64, static CRT), Linux,
    - packages `FlowtoysUpdater-osx-x.y.z.zip`, `FlowtoysUpdater-osx-x.y.z.pkg` (pkgbuild, installs to `/Applications`, auto-launches after install), `FlowtoysUpdater-win-x64-x.y.z.exe` (Inno Setup), `FlowtoysUpdater-linux-x.y.z.zip`,
    - signs/notarizes the macOS artifacts **only if signing secrets are configured** (below),
-   - creates a GitHub Release with all artifacts.
+   - attaches all artifacts to the GitHub Release.
 5. **Smoke-test on hardware** — flash a real prop with the built app. CI cannot test the HID path.
 6. **Publish to flow-toys.com** (manual until server automation exists):
    - upload the artifacts to `http://flow-toys.com/fusion/app/`,
@@ -106,6 +106,8 @@ Plus the usual launch checks from the bad-dylib incident (#24): `otool -L` on th
 
 Windows signing (against SmartScreen warnings) needs an OV/EV code-signing certificate and a `signtool` step in the workflow — tracked in issue #4.
 
+The first release-please release is pinned to 1.2.0 with `release-as` in `release-please-config.json`, counting from the 1.1.9 commit (`last-release-sha`). Remove both keys once 1.2.0 has shipped. Repo setting needed once: Settings → Actions → General → **Allow GitHub Actions to create and approve pull requests**.
+
 ## Dependency updates
 
-Dependabot (`.github/dependabot.yml`) opens weekly PRs against `modernize` for GitHub Actions (SHA pins) and the `ThirdParty/` submodules (JUCE, hidapi). The Catch2 pin in `Tests/CMakeLists.txt` is manual — check [Catch2 releases](https://github.com/catchorg/Catch2/releases) occasionally.
+Dependabot (`.github/dependabot.yml`) opens one grouped PR per ecosystem a week against `modernize`, for GitHub Actions (SHA pins) and the `ThirdParty/` submodules (JUCE, hidapi). The Catch2 pin in `Tests/CMakeLists.txt` and the clang-format pin in `build.yml` are manual — check [Catch2 releases](https://github.com/catchorg/Catch2/releases) occasionally.
