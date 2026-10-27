@@ -5,8 +5,7 @@
       "release-type": "simple",
       "package-name": "FlowtoysUpdater",
       "include-component-in-tag": false,
-      "last-release-sha": "d12d9e4d38ab5a2a1ab03fee7ec1979e4e4deda3",
-      "release-as": "1.2.0",
+      "last-release-sha": "d1f14d1219f4a09b1a1f7dd1e9fe88352a296f86",
       "extra-files": [
         { "type": "generic", "path": "CMakeLists.txt" }
       ],
