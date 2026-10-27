@@ -17,10 +17,13 @@
 # Tags pushed by hand don't trigger anything: release-please owns versions
 # and tags (docs/RELEASING.md).
 #
-# Running the workflow by hand (Actions → Release → Run workflow) is a
-# dry run: it builds, signs and notarizes exactly like a tagged release,
-# using the CMakeLists.txt version, but only uploads workflow artifacts
-# and never publishes a GitHub Release.
+# Anything not called with a tag is a dry run: it builds, signs and
+# notarizes exactly like a real release, using the CMakeLists.txt
+# version, but only uploads workflow artifacts and never publishes a
+# GitHub Release. Start one by pushing any commit to the release-dry-run
+# branch (git push -f origin <ref>:release-dry-run), or with Actions →
+# Release → Run workflow once this file is on the default branch
+# (GitHub only offers manual runs for workflows that exist there).
 
 name: Release
 
@@ -43,6 +46,8 @@ on:
         required: false
       NOTARY_TEAM_ID:
         required: false
+  push:
+    branches: [release-dry-run]
   workflow_dispatch:
 
 permissions:
@@ -298,7 +303,8 @@ jobs:
 
   publish:
     name: Attach binaries to the GitHub Release
-    # Manual runs are dry runs: their artifacts stay on the workflow run.
+    # Only release-please's call passes a tag. Dry runs (release-dry-run
+    # pushes, manual runs) keep their artifacts on the workflow run.
     if: inputs.tag != ''
     needs: [macos, windows, linux]
     runs-on: ubuntu-26.04
