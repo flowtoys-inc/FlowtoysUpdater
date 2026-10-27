@@ -22,7 +22,7 @@ If only Command Line Tools are selected on the machine, prefix with
 
 ## Workflow
 
-- Org-wide rules: `flowtoys-inc/dev-standards` (`CLAUDE.md`, `CONTRIBUTING.md`); this file wins where they conflict. That repo is private, so this public repo inlines copies of its `pr-checks.yml` and `release-please.yml` (comments in each say how to switch to the shared ones).
+- Org-wide rules: `flowtoys-inc/dev-standards` (`CLAUDE.md`, `CONTRIBUTING.md`); this file wins where they conflict. `pr-checks.yml` and the release-please job call its reusable workflows, pinned to a release SHA; the build matrix and clang-format stay local.
 - PR titles are Conventional Commits (CI checks); PRs are squash-merged.
 - Format with `uvx clang-format@23.1.3 -i Source/*.cpp Source/*.h Tests/*.cpp`; CI fails on any diff. Build with `-DFLOWTOYS_WARNINGS_AS_ERRORS=ON` before pushing (CI does).
 - Runners are pinned to the newest GA images. The shipped Linux binary is built in an `ubuntu:22.04` container on purpose (glibc only works forward); don't move that to a newer distro.
