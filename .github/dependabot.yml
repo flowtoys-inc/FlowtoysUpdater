@@ -4,8 +4,8 @@
 # Note: the Catch2 pin in Tests/CMakeLists.txt (CMake FetchContent) and the
 # clang-format pin in build.yml are not covered by dependabot and are bumped
 # manually.
-# PR checks skip Dependabot PRs, so the commit-message prefixes keep their
-# squash titles Conventional (ci:/build: are hidden from release-please, so
+# The commit-message prefixes keep Dependabot PR titles passing PR checks
+# (Conventional Commits; ci:/build: are hidden from release-please, so
 # a bump alone never cuts a release).
 version: 2
 updates:

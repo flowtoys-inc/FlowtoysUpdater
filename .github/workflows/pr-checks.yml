@@ -17,7 +17,6 @@ concurrency:
 
 jobs:
   pr-checks:
-    # Dependabot titles aren't Conventional Commits and it adds no secrets;
-    # a skipped job still satisfies a required check.
-    if: github.event.pull_request.user.login != 'dependabot[bot]'
+    # Runs on Dependabot PRs too: dependabot.yml prefixes their commits
+    # ci(deps)/build(deps), so the titles pass, and they get the secret scan.
     uses: flowtoys-inc/dev-standards/.github/workflows/pr-checks.yml@36a1fbb92d4868cb87e8db23931e3e6ddd8fae69 # v0.1.0
