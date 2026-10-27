@@ -116,6 +116,12 @@ function(flowtoys_enable_warnings target)
         # Newer SDKs deprecate APIs inside JUCE itself; report those without
         # failing the build until a JUCE bump catches up.
         target_compile_options(${target} PRIVATE -Wno-error=deprecated-declarations)
+        # GCC's maybe-uninitialized is flow-sensitive and fires false
+        # positives inside JUCE's bundled HarfBuzz and std::unique_ptr
+        # (JUCE 9 + GCC 11/15); keep it visible but non-fatal.
+        if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+            target_compile_options(${target} PRIVATE -Wno-error=maybe-uninitialized)
+        endif()
     endif()
 endfunction()
 flowtoys_enable_warnings(FlowtoysUpdater)

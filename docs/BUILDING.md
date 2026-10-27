@@ -44,7 +44,7 @@ Install the build dependencies (Debian/Ubuntu names):
 ```bash
 sudo apt-get install -y build-essential cmake \
   libfreetype-dev libfontconfig1-dev \
-  libx11-dev libxinerama-dev libxrandr-dev libxcursor-dev libxcomposite-dev libxext-dev \
+  libx11-dev libxinerama-dev libxrandr-dev libxcursor-dev libxcomposite-dev libxext-dev libxi-dev \
   libcurl4-openssl-dev libasound2-dev \
   libusb-1.0-0-dev libudev-dev
 ```
