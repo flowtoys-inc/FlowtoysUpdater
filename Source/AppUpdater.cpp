@@ -206,7 +206,7 @@ If the auto-update fails, you can always download and replace it manually.";
 	}
 }
 
-void AppUpdater::finished(URL::DownloadTask *task, bool success)
+void AppUpdater::finished(URL::DownloadTask *, bool success)
 {
 	if (!success)
 	{
@@ -417,6 +417,10 @@ void UpdateDialogWindow::newMessage(const AppUpdateEvent &e)
 			okButton.setEnabled(false);
 		}
 		break;
+
+		case AppUpdateEvent::UPDATE_AVAILABLE:
+		case AppUpdateEvent::UPDATE_FINISHED:
+			break;
 	}
 }
 

@@ -10,25 +10,27 @@
 
 #include "Prop.h"
 
+#ifdef _MSC_VER
 #pragma warning(disable : 4189 4244)
+#endif
 
 
 
 Prop::Prop(StringRef productString, StringRef serial, hid_device *device, PropType type, int vid, int pid, const wchar_t *serialNumber) :
 	Thread("Prop"),
 	productString(productString),
-	type(type),
-	serial(serial),
 	dVid(vid),
 	dPid(pid),
-	device(device),
-	deviceAckStatus(0),
 	dSN(serialNumber),
+	type(type),
+	serial(serial),
+	device(device),
 	deviceStatus(NotSet),
-	progression(0),
+	deviceAckStatus(0),
 	infos("[Not set]"),
-	numNoResponses(0),
+	progression(0),
 	isFlashing(false),
+	numNoResponses(0),
 	queuedNotifier(50)
 {
 
@@ -103,7 +105,7 @@ void Prop::sendGetStatus()
 	{
 		numNoResponses = 0; //only *consecutive* misses count towards a disconnect
 
-		uint8_t cmd = result->readByte();
+		[[maybe_unused]] uint8_t cmd = result->readByte();
 		for (int i = 0; i < 3; i++)
 			result->readByte(); //2 useless bytes
 		deviceAckStatus = result->readInt();
@@ -138,7 +140,7 @@ void Prop::sendGetVersion(Subject subject)
 	{
 		jassert(result->getDataSize() == 64);
 
-		uint8_t cmd = result->readByte();
+		[[maybe_unused]] uint8_t cmd = result->readByte();
 
 		if (subject == App)
 			appActive = result->readByte() == 1;
@@ -264,7 +266,7 @@ void Prop::flash(MemoryBlock *_dataBlock, int _totalBytesToSend)
 
 void Prop::run()
 {
-	const int bufferSize = 64; //fixed for bootloader
+	[[maybe_unused]] const int bufferSize = 64; //fixed for bootloader
 
 	numNoResponses = 0;
 	isFlashing = true;
@@ -309,7 +311,7 @@ void Prop::run()
 
 	int sizeToErase = type == CAPSULE ? 51200 : 113664; //Size of the data to erase varies depending on the prop type
 
-	int index = 0;
+	[[maybe_unused]] int index = 0;
 
 	while (!threadShouldExit())
 	{
@@ -351,7 +353,7 @@ void Prop::run()
 	DBG("Flashing...");
 
 	int currentPacket = 0;
-	int currentDataOffset = 0;
+	[[maybe_unused]] int currentDataOffset = 0;
 
 
 	while (!threadShouldExit())

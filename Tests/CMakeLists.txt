@@ -20,6 +20,8 @@ target_link_libraries(FlowtoysUpdaterTests PRIVATE
     juce::juce_core
     juce::juce_recommended_config_flags)
 
+flowtoys_enable_warnings(FlowtoysUpdaterTests)
+
 list(APPEND CMAKE_MODULE_PATH ${Catch2_SOURCE_DIR}/extras)
 include(CTest)
 include(Catch)

@@ -46,8 +46,8 @@ PropConnectScreen::~PropConnectScreen()
 void PropConnectScreen::paint(Graphics &g)
 {
 	Rectangle<int> r = getLocalBounds();
-	Rectangle<int> tr = r.removeFromTop(10);
-	Rectangle<int> fr = r.removeFromBottom(200);
+	r.removeFromTop(10);
+	r.removeFromBottom(200);
 
 	int numProps = PropManager::getInstance()->props.size();
 	String s = "";

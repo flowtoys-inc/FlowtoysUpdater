@@ -22,10 +22,10 @@ public:
 		data(data),
 		totalBytesToSend(totalBytesToSend),
 		infos(infos),
-		meta(meta),
 		versionString(versionString),
-		version(version),
+		meta(meta),
 		hwRev(hwRev),
+		version(version),
 		pid(pid),
 		vid(vid)
 	{

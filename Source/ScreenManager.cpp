@@ -17,8 +17,8 @@
 #include "EndScreen.h"
 
 ScreenManager::ScreenManager() :
-	curScreen(nullptr),
-	prevBT("Previous", .5, Colours::lightgrey)
+	prevBT("Previous", .5, Colours::lightgrey),
+	curScreen(nullptr)
 {
 	screens.add(new PropChooserScreen());
 	screens.add(new PropConnectScreen());
@@ -140,7 +140,7 @@ void ScreenManager::gotoScreen(AppScreen::ScreenID id)
 	}
 }
 
-bool ScreenManager::keyPressed(const KeyPress &e)
+bool ScreenManager::keyPressed([[maybe_unused]] const KeyPress &e)
 {
 #if JUCE_DEBUG
 	if (e.getKeyCode() == e.createFromDescription("n").getKeyCode() && e.getModifiers().isCommandDown())

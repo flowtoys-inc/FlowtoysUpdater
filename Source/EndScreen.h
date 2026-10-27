@@ -22,7 +22,7 @@ public:
 	TextButton reconnectBT;
 
 	void paint(Graphics &g) override;
-	void resized();
+	void resized() override;
 
 	// Inherited via Listener
 	virtual void buttonClicked(Button *) override;
