@@ -42,12 +42,18 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # PRs build arm64 only (half the compile); master and releases
+          # stay universal, so the shipped architecture set is still built
+          # on every merge.
           - name: macOS
             os: macos-26
-            cmake_flags: -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
+            cmake_flags: ${{ github.event_name == 'pull_request' && '-DCMAKE_OSX_ARCHITECTURES=arm64' || '-DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"' }}
+          # sccache, not ccache: it understands MSVC's command line.
           - name: Windows
             os: windows-2025
-            cmake_flags: ""
+            compiler_cache: sccache
+            # Embedded (/Z7) debug info, so sccache can cache every object.
+            cmake_flags: -DCMAKE_POLICY_DEFAULT_CMP0141=NEW -DCMAKE_MSVC_DEBUG_INFORMATION_FORMAT=Embedded
           # Newest toolchain, for warnings; not packaged.
           - name: Linux
             os: ubuntu-26.04
@@ -60,6 +66,7 @@ jobs:
             cmake_flags: ""
     env:
       CMAKE_FLAGS: ${{ matrix.cmake_flags }}
+      COMPILER_CACHE: ${{ matrix.compiler_cache || 'ccache' }}
     steps:
       # The bare container has no git, without which checkout falls back to
       # a tarball and skips the submodules.
@@ -68,7 +75,7 @@ jobs:
         run: |
           apt-get update
           DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-            ca-certificates git sudo build-essential cmake zip
+            ca-certificates git sudo build-essential cmake zip ccache ninja-build
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -83,12 +90,37 @@ jobs:
             libfreetype-dev libfontconfig1-dev \
             libx11-dev libxinerama-dev libxrandr-dev libxcursor-dev libxcomposite-dev libxext-dev libxi-dev \
             libcurl4-openssl-dev libasound2-dev \
-            libusb-1.0-0-dev libudev-dev
+            libusb-1.0-0-dev libudev-dev \
+            ninja-build
+
+      - name: Install Ninja (macOS)
+        if: runner.os == 'macOS'
+        run: command -v ninja || brew install ninja
+
+      # Ninja on Windows needs the MSVC environment (cl.exe, link.exe, and
+      # the Ninja that ships with Visual Studio) on PATH.
+      - name: Set up MSVC environment
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
+
+      # Caches are saved only from master and restored everywhere, so PRs
+      # start warm without filling the 10 GB repo cache with per-PR copies.
+      - name: Compiler cache
+        uses: hendrikmuhs/ccache-action@f09c25b45002a07be2955cbe52e8cee55643f89d # v1.2.24
+        with:
+          key: ${{ matrix.name }}
+          variant: ${{ matrix.compiler_cache || 'ccache' }}
+          save: ${{ github.ref == 'refs/heads/master' }}
+          max-size: 1G
+          evict-old-files: job
 
       # eval re-splits CMAKE_FLAGS, which can hold several quoted arguments.
       - name: Configure
         shell: bash
-        run: eval cmake -B build -DCMAKE_BUILD_TYPE=Release -DFLOWTOYS_WARNINGS_AS_ERRORS=ON "$CMAKE_FLAGS"
+        run: >-
+          eval cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DFLOWTOYS_WARNINGS_AS_ERRORS=ON
+          -DCMAKE_C_COMPILER_LAUNCHER="$COMPILER_CACHE" -DCMAKE_CXX_COMPILER_LAUNCHER="$COMPILER_CACHE"
+          "$CMAKE_FLAGS"
 
       - name: Build
         run: cmake --build build --config Release --parallel
