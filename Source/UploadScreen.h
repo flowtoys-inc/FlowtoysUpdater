@@ -14,9 +14,8 @@
 #include "PropManager.h"
 #include "FirmwareManager.h"
 
-class UploadScreen :
-	public AppScreen,
-	public PropManager::AsyncListener
+class UploadScreen : public AppScreen,
+					 public PropManager::AsyncListener
 {
 public:
 	UploadScreen();

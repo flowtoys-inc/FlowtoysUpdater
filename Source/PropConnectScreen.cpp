@@ -29,14 +29,13 @@ PropConnectScreen::PropConnectScreen() :
 	helpBT.setMouseCursor(MouseCursor::PointingHandCursor);
 	helpBT.addMouseListener(this, false);
 
-	
+
 	resetBTLink.setColour(resetBTLink.textColourId, Colours::purple.brighter(.7f));
 	resetBTLink.setText("click here for reset instructions.", dontSendNotification);
 	resetBTLink.setJustificationType(Justification::centred);
 	addAndMakeVisible(&resetBTLink);
 	resetBTLink.setMouseCursor(MouseCursor::PointingHandCursor);
 	resetBTLink.addMouseListener(this, false);
-
 }
 
 PropConnectScreen::~PropConnectScreen()
@@ -44,15 +43,15 @@ PropConnectScreen::~PropConnectScreen()
 	if (PropManager::getInstanceWithoutCreating() != nullptr) PropManager::getInstance()->removeAsyncManagerListener(this);
 }
 
-void PropConnectScreen::paint(Graphics & g)
+void PropConnectScreen::paint(Graphics &g)
 {
 	Rectangle<int> r = getLocalBounds();
-	Rectangle<int> tr = r.removeFromTop(10);
-	Rectangle<int> fr = r.removeFromBottom(200);
+	r.removeFromTop(10);
+	r.removeFromBottom(200);
 
 	int numProps = PropManager::getInstance()->props.size();
 	String s = "";
-	
+
 	if (PropManager::getInstance()->selectedType == PropType::CAPSULE)
 	{
 		s = "Connect your capsule(s) now \
@@ -72,8 +71,6 @@ void PropConnectScreen::paint(Graphics & g)
 \ngrouping might be lost depending on version, \
 \nand favorites might look different due to difference in mode / adjust.";
 		}
-
-
 	}
 	else
 	{
@@ -85,9 +82,8 @@ void PropConnectScreen::paint(Graphics & g)
 \nif they are the same props/use the same firmware, you can use a USB hub to update them all at once. \
 \nconnect them all via USB, then click the next step button below";
 		}
-
 	}
-	
+
 
 	if (numProps > 0)
 	{
@@ -101,13 +97,13 @@ void PropConnectScreen::paint(Graphics & g)
 			s += String(numProps) + " " + displayNames[(int)(PropManager::getInstance()->selectedType)].toLowerCase() + " connected:\n";
 		}
 	}
-	
-		
+
+
 	int index = 0;
 	for (auto &p : PropManager::getInstance()->props)
 	{
 		if (index > 0) s += "\n";
-		s += "["+ String(index) + "] "+ p->infos;
+		s += "[" + String(index) + "] " + p->infos;
 		index++;
 	}
 
@@ -117,9 +113,8 @@ void PropConnectScreen::paint(Graphics & g)
 	/*
 	g.drawFittedText("firmware to be uploaded:\n" + FirmwareManager::getInstance()->selectedFirmware->infos, tr, Justification::centred, 2);
 	*/
-	
-	g.drawFittedText(s, r, Justification::centredTop, numProps+1);
-	
+
+	g.drawFittedText(s, r, Justification::centredTop, numProps + 1);
 }
 
 void PropConnectScreen::resized()
@@ -133,14 +128,13 @@ void PropConnectScreen::resized()
 		resetBTLink.setBounds(fr.removeFromTop(20));
 	}
 	flashBT.setBounds(fr.withSizeKeepingCentre(100, 40));
-	
 }
 
 void PropConnectScreen::reset()
 {
-    PropManager::getInstance()->clear();
-    
-    
+	PropManager::getInstance()->clear();
+
+
 	PropManager::getInstance()->checkProps();
 }
 
@@ -151,7 +145,7 @@ void PropConnectScreen::checkProps()
 
 	if (PropManager::getInstance()->selectedType == PropType::CLUB) // only check vision
 	{
-		for (auto& p : PropManager::getInstance()->props)
+		for (auto &p : PropManager::getInstance()->props)
 		{
 			if (hwRev == 0) hwRev = p->hw_rev;
 			if (hwRev != p->hw_rev)
@@ -165,50 +159,52 @@ void PropConnectScreen::checkProps()
 
 	resetBTLink.setVisible(PropManager::getInstance()->props.size() == 0);
 	flashBT.setEnabled(PropManager::getInstance()->props.size() > 0 && !multipleRevisionsDetected);
-	
+
 	resized();
 }
 
-void PropConnectScreen::mouseDown(const MouseEvent & e)
+void PropConnectScreen::mouseDown(const MouseEvent &e)
 {
 	AppScreen::mouseDown(e);
 
 	if (e.eventComponent == &helpBT)
 	{
 		String link = "https://flowtoys2.freshdesk.com/support/solutions/articles/6000216768-flowos-firmware-updater-troubleshooting";
-		if (PropManager::getInstance()->selectedType == PropType::CLUB) link = "https://flowtoys2.freshdesk.com/support/solutions/articles/6000213554-how-to-update-your-vision-prop-firmware";
-		else link = "https://flowtoys2.freshdesk.com/support/solutions/articles/6000213534-how-to-update-your-capsule-2-0-firmware";
-		URL(link).launchInDefaultBrowser(); 
+		if (PropManager::getInstance()->selectedType == PropType::CLUB)
+			link = "https://flowtoys2.freshdesk.com/support/solutions/articles/6000213554-how-to-update-your-vision-prop-firmware";
+		else
+			link = "https://flowtoys2.freshdesk.com/support/solutions/articles/6000213534-how-to-update-your-capsule-2-0-firmware";
+		URL(link).launchInDefaultBrowser();
 	}
 	else if (e.eventComponent == &resetBTLink)
 	{
 		String link = "";
-		if (PropManager::getInstance()->selectedType == PropType::CLUB) link = "https://flowtoys2.freshdesk.com/support/solutions/articles/6000202797-vision-clubs-i-m-having-trouble-grouping";
-		else link = "https://flowtoys2.freshdesk.com/support/solutions/articles/6000232163-how-to-reset-a-capsule-2-0-light";
+		if (PropManager::getInstance()->selectedType == PropType::CLUB)
+			link = "https://flowtoys2.freshdesk.com/support/solutions/articles/6000202797-vision-clubs-i-m-having-trouble-grouping";
+		else
+			link = "https://flowtoys2.freshdesk.com/support/solutions/articles/6000232163-how-to-reset-a-capsule-2-0-light";
 		URL(link).launchInDefaultBrowser();
 	}
 }
 
-void PropConnectScreen::newMessage(const PropManager::PropManagerEvent & e)
+void PropConnectScreen::newMessage(const PropManager::PropManagerEvent &e)
 {
-	switch(e.type)
+	switch (e.type)
 	{
-	case PropManager::PropManagerEvent::PROPS_CHANGED:
-		checkProps();
-		repaint();
-		break;
+		case PropManager::PropManagerEvent::PROPS_CHANGED:
+			checkProps();
+			repaint();
+			break;
 
-	default:
-		break;
+		default:
+			break;
 	}
 }
 
-void PropConnectScreen::buttonClicked(Button * b)
+void PropConnectScreen::buttonClicked(Button *b)
 {
 	if (b == &flashBT)
 	{
 		screenListeners.call(&ScreenListener::screenFinish, this);
 	}
-	
 }
-

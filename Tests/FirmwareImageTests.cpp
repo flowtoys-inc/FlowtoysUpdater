@@ -11,7 +11,7 @@ static juce::MemoryBlock buildZip(const std::vector<std::pair<juce::String, juce
 	{
 		auto content = e.second.toRawUTF8();
 		builder.addEntry(std::make_unique<juce::MemoryInputStream>(content, strlen(content), true),
-		                 5, e.first, juce::Time());
+						 5, e.first, juce::Time());
 	}
 
 	juce::MemoryOutputStream out;
@@ -31,12 +31,12 @@ static const juce::String validMeta =
 
 TEST_CASE("valid .fwimg parses")
 {
-	auto img = parseBlock(buildZip({ { "meta", validMeta }, { "data", "some firmware bytes" } }));
+	auto img = parseBlock(buildZip({{"meta", validMeta}, {"data", "some firmware bytes"}}));
 	REQUIRE(img != nullptr);
 
-	CHECK(img->vid == 61703);  // 0xF107
-	CHECK(img->pid == 4096);   // 0x1000
-	CHECK(img->hwRev == 1280); // 0x500 == rev E
+	CHECK(img->vid == 61703);            // 0xF107
+	CHECK(img->pid == 4096);             // 0x1000
+	CHECK(img->hwRev == 1280);           // 0x500 == rev E
 	CHECK(img->versionString == "2.10"); // fw_rev 522 == (2<<8)|10
 	CHECK(img->data.getSize() == strlen("some firmware bytes"));
 	CHECK(img->totalBytesToSend == packetLength); // rounded up to one packet
@@ -45,30 +45,30 @@ TEST_CASE("valid .fwimg parses")
 TEST_CASE("totalBytesToSend rounds up to whole packets")
 {
 	juce::String data61(juce::String::repeatedString("x", 61));
-	auto img = parseBlock(buildZip({ { "meta", validMeta }, { "data", data61 } }));
+	auto img = parseBlock(buildZip({{"meta", validMeta}, {"data", data61}}));
 	REQUIRE(img != nullptr);
 	CHECK(img->totalBytesToSend == packetLength * 2);
 
 	juce::String data60(juce::String::repeatedString("x", 60));
-	img = parseBlock(buildZip({ { "meta", validMeta }, { "data", data60 } }));
+	img = parseBlock(buildZip({{"meta", validMeta}, {"data", data60}}));
 	REQUIRE(img != nullptr);
 	CHECK(img->totalBytesToSend == packetLength);
 }
 
 TEST_CASE("zip missing the meta entry is rejected")
 {
-	CHECK(parseBlock(buildZip({ { "data", "some firmware bytes" } })) == nullptr);
+	CHECK(parseBlock(buildZip({{"data", "some firmware bytes"}})) == nullptr);
 }
 
 TEST_CASE("zip missing the data entry is rejected")
 {
-	CHECK(parseBlock(buildZip({ { "meta", validMeta } })) == nullptr);
+	CHECK(parseBlock(buildZip({{"meta", validMeta}})) == nullptr);
 }
 
 TEST_CASE("meta that is not a JSON object is rejected")
 {
-	CHECK(parseBlock(buildZip({ { "meta", "not json at all" }, { "data", "bytes" } })) == nullptr);
-	CHECK(parseBlock(buildZip({ { "meta", "[1,2,3]" }, { "data", "bytes" } })) == nullptr);
+	CHECK(parseBlock(buildZip({{"meta", "not json at all"}, {"data", "bytes"}})) == nullptr);
+	CHECK(parseBlock(buildZip({{"meta", "[1,2,3]"}, {"data", "bytes"}})) == nullptr);
 }
 
 TEST_CASE("non-zip and empty inputs are rejected")
@@ -82,7 +82,7 @@ TEST_CASE("non-zip and empty inputs are rejected")
 
 TEST_CASE("empty meta object parses with defaults")
 {
-	auto img = parseBlock(buildZip({ { "meta", "{}" }, { "data", "bytes" } }));
+	auto img = parseBlock(buildZip({{"meta", "{}"}, {"data", "bytes"}}));
 	REQUIRE(img != nullptr);
 	CHECK(img->vid == 0);
 	CHECK(img->pid == 0);

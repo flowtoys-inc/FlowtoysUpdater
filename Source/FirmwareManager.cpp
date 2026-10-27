@@ -12,18 +12,18 @@
 
 juce_ImplementSingleton(FirmwareManager)
 
-FirmwareManager::FirmwareManager() :
+	FirmwareManager::FirmwareManager() :
 	Thread("Firmwares"),
-    selectedFirmware(nullptr),
-    errored(false),
-    queuedNotifier(50)
+	selectedFirmware(nullptr),
+	errored(false),
+	queuedNotifier(50)
 
 {
 	firmwareFolder = File::getSpecialLocation(File::SpecialLocationType::userApplicationDataDirectory).getChildFile("FlowtoysFirmwares");
 	if (!firmwareFolder.exists()) firmwareFolder.createDirectory();
 
 	startThread();
-	startTimer(1000*3600); //check every hour
+	startTimer(1000 * 3600); //check every hour
 }
 
 FirmwareManager::~FirmwareManager()
@@ -41,7 +41,8 @@ void FirmwareManager::clearFirmwares()
 {
 	DBG("Clear firmwares");
 	Array<File> files = firmwareFolder.findChildFiles(File::TypesOfFileToFind::findFiles, false, "*.fwimg");
-	for (auto &f : files) f.deleteFile();
+	for (auto &f : files)
+		f.deleteFile();
 }
 
 void FirmwareManager::loadFirmwares()
@@ -49,13 +50,13 @@ void FirmwareManager::loadFirmwares()
 	DBG("Loading firmwares");
 	Array<File> files = firmwareFolder.findChildFiles(File::TypesOfFileToFind::findFiles, false, "*.fwimg");
 
-    files.sort();
+	files.sort();
 
 	Array<std::shared_ptr<Firmware>> newFirmwares;
 	for (auto &f : files)
 	{
 		std::shared_ptr<Firmware> fw = getFirmwareForFile(f);
-		if(fw != nullptr) newFirmwares.add(fw);
+		if (fw != nullptr) newFirmwares.add(fw);
 	}
 
 	newFirmwares.sort(comparator, true);
@@ -112,7 +113,8 @@ float FirmwareManager::getFirmwaresProgress()
 {
 	if (firmwareProgress.isEmpty()) return 0;
 	float p = 0;
-	for (auto& fp : firmwareProgress) p += fp;
+	for (auto &fp : firmwareProgress)
+		p += fp;
 	p /= firmwareProgress.size();
 	return p;
 }
@@ -151,9 +153,9 @@ void FirmwareManager::run()
 
 	URL updateURL(remoteHost + "firmwares.php");
 	std::unique_ptr<InputStream> stream(updateURL.createInputStream(URL::InputStreamOptions(URL::ParameterHandling::inAddress)
-		.withConnectionTimeoutMs(2000)
-		.withResponseHeaders(&responseHeaders)
-		.withStatusCode(&statusCode)));
+																		.withConnectionTimeoutMs(2000)
+																		.withResponseHeaders(&responseHeaders)
+																		.withStatusCode(&statusCode)));
 	//Enforced on every platform (was Windows-only, #22): a captive portal or
 	//error page must not reach the JSON parser. A dead connection arrives
 	//here as statusCode 0 and takes the same errored + local-cache path.
@@ -169,7 +171,7 @@ void FirmwareManager::run()
 
 	if (stream != nullptr)
 	{
-		String content = stream->readEntireStreamAsString(); 
+		String content = stream->readEntireStreamAsString();
 		var data = JSON::parse(content);
 
 		if (data.isObject())
@@ -195,7 +197,7 @@ void FirmwareManager::run()
 						std::shared_ptr<Firmware> fw = getFirmwareForFile(f);
 						if (fw != nullptr)
 						{
-							DBG("File already downloaded and valid : "+f.getFileName());
+							DBG("File already downloaded and valid : " + f.getFileName());
 							fileExistAndIsValid = true;
 						}
 						else
@@ -210,58 +212,61 @@ void FirmwareManager::run()
 						firmwareProgress.set(downloadedFirmwares, 1);
 						downloadedFirmwares++;
 						if (downloadedFirmwares == onlineFirmwares) loadFirmwares();
-					}else
+					}
+					else
 					{
-                        String fURL = remoteHost + String("firmwares/") + URL::addEscapeChars(fileData[i].toString(),false); //add handling for spaces
-                        
-                        DBG("Downloading " << fURL);
+						String fURL = remoteHost + String("firmwares/") + URL::addEscapeChars(fileData[i].toString(), false); //add handling for spaces
+
+						DBG("Downloading " << fURL);
 						URL downloadURL(fURL);
-                        std::unique_ptr<URL::DownloadTask> t = downloadURL.downloadToFile(f, URL::DownloadTaskOptions().withListener(this));
-                        if(t == nullptr)
-                        {
-                            DBG("Download errored");
+						std::unique_ptr<URL::DownloadTask> t = downloadURL.downloadToFile(f, URL::DownloadTaskOptions().withListener(this));
+						if (t == nullptr)
+						{
+							DBG("Download errored");
 							firmwareProgress.set(downloadedFirmwares, 1);
 							downloadedFirmwares++;
-                        }else
-                        {
+						}
+						else
+						{
 							firmwareProgress.set(downloadedFirmwares, 0);
 							tasks.add(t.release());
-                        }
+						}
 					}
 				}
 			}
-		} else
+		}
+		else
 		{
 			DBG("Error reading online firmware list, loading local firmwares");
 			errored = true;
 			loadFirmwares();
 		}
-	} else
+	}
+	else
 	{
 		DBG("Couldn't access internet, loading local firmwares");
 		errored = true;
 		queuedNotifier.addMessage(new FirmwareManagerEvent(FirmwareManagerEvent::FIRMWARE_LOAD_ERROR));
 		loadFirmwares();
 	}
-
 }
 
-void FirmwareManager::progress (URL::DownloadTask* t , int64 downloaded, int64 total)
+void FirmwareManager::progress(URL::DownloadTask *t, int64 downloaded, int64 total)
 {
-    DBG("Progress !");
+	DBG("Progress !");
 	float p = total > 0 ? (float)downloaded / (float)total : 0.0f;
 	int index = tasks.indexOf(t);
 	firmwareProgress.set(index, p);
 	queuedNotifier.addMessage(new FirmwareManagerEvent(FirmwareManagerEvent::FIRMWARE_LOAD_PROGRESS));
 }
 
-void FirmwareManager::finished(URL::DownloadTask * t, bool success)
+void FirmwareManager::finished(URL::DownloadTask *t, bool success)
 {
 	downloadedFirmwares++;
 
 	if (success)
 	{
-		
+
 		if (downloadedFirmwares == onlineFirmwares)
 		{
 			DBG("ALL firmware downloaded !");
@@ -273,12 +278,13 @@ void FirmwareManager::finished(URL::DownloadTask * t, bool success)
 			firmwareProgress.set(index, 1);
 			queuedNotifier.addMessage(new FirmwareManagerEvent(FirmwareManagerEvent::FIRMWARE_LOAD_PROGRESS));
 		}
-	}else
-    {
-        DBG("Finished with errors");
+	}
+	else
+	{
+		DBG("Finished with errors");
 
 		queuedNotifier.addMessage(new FirmwareManagerEvent(FirmwareManagerEvent::FIRMWARE_LOAD_ERROR));
-    }
+	}
 }
 
 void FirmwareManager::timerCallback()

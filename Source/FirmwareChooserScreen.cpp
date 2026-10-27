@@ -32,7 +32,6 @@ FirmwareChooserScreen::FirmwareChooserScreen() :
 	helpBT.addMouseListener(this, false);
 
 	FirmwareManager::getInstance()->addAsyncManagerListener(this);
-
 }
 
 FirmwareChooserScreen::~FirmwareChooserScreen()
@@ -46,7 +45,7 @@ void FirmwareChooserScreen::updateVisibility()
 	String noFWText = "No firmware available, are you connected to internet?";
 	fwChooser.clear();
 	fwChooser.setTextWhenNoChoicesAvailable(noFWText);
-	
+
 	fwList = FirmwareManager::getInstance()->getFirmwaresForType(PropManager::getInstance()->selectedType, -1);
 
 	int targetHW = -1;
@@ -55,7 +54,7 @@ void FirmwareChooserScreen::updateVisibility()
 		targetHW = PropManager::getInstance()->props[0]->hw_rev;
 	}
 
-	
+
 	int indexToSelect = -1;
 	for (int i = 0; i < fwList.size(); i++)
 	{
@@ -104,14 +103,19 @@ void FirmwareChooserScreen::paint(Graphics& g)
 	String s = "";
 	if (!loaded && !errored)
 	{
-		if (noOnlineFW) s = "No firmwares available online or locally right now.";
-		else  s = "Loading firmwares, please wait.... " + String((int)(progress * 100)) + "%";
+		if (noOnlineFW)
+			s = "No firmwares available online or locally right now.";
+		else
+			s = "Loading firmwares, please wait.... " + String((int)(progress * 100)) + "%";
 	}
 
-	else if (!loaded && errored) s = "There were errors while downloading online firmwares and no local firmwares availables.";
-	else if (loaded && errored) s = "There were errors while downloading oneline firmwares, showing only local firmwares.";
+	else if (!loaded && errored)
+		s = "There were errors while downloading online firmwares and no local firmwares availables.";
+	else if (loaded && errored)
+		s = "There were errors while downloading oneline firmwares, showing only local firmwares.";
 
-	if (s.isNotEmpty()) g.setColour(Colours::orange);
+	if (s.isNotEmpty())
+		g.setColour(Colours::orange);
 	else
 	{
 		g.setColour(Colours::lightgrey);
@@ -132,7 +136,6 @@ void FirmwareChooserScreen::paint(Graphics& g)
 	}
 
 	g.drawFittedText(s, getLocalBounds().removeFromTop(150).reduced(40, 10), Justification::centred, 20, false);
-
 }
 
 void FirmwareChooserScreen::reset()
@@ -149,8 +152,10 @@ void FirmwareChooserScreen::mouseDown(const MouseEvent& e)
 	if (e.eventComponent == &helpBT)
 	{
 		String link = "https://flowtoys2.freshdesk.com/support/solutions/articles/6000216768-flowos-firmware-updater-troubleshooting";
-		if (PropManager::getInstance()->selectedType == PropType::CLUB) link = "https://flowtoys2.freshdesk.com/support/solutions/articles/6000213554-how-to-update-your-vision-prop-firmware";
-		else link = "https://flowtoys2.freshdesk.com/support/solutions/articles/6000213534-how-to-update-your-capsule-2-0-firmware";
+		if (PropManager::getInstance()->selectedType == PropType::CLUB)
+			link = "https://flowtoys2.freshdesk.com/support/solutions/articles/6000213554-how-to-update-your-vision-prop-firmware";
+		else
+			link = "https://flowtoys2.freshdesk.com/support/solutions/articles/6000213534-how-to-update-your-capsule-2-0-firmware";
 		URL(link).launchInDefaultBrowser();
 	}
 }
@@ -161,7 +166,7 @@ void FirmwareChooserScreen::resized()
 	Rectangle<int> br = r.removeFromBottom(200);
 	selectBT.setBounds(br.withSizeKeepingCentre(100, 40).translated(0, -50));
 	chooseFileBT.setBounds(br.withSizeKeepingCentre(120, 40));
-	helpBT.setBounds(r.withSizeKeepingCentre(450, 30).translated(0,40));
+	helpBT.setBounds(r.withSizeKeepingCentre(450, 30).translated(0, 40));
 	fwChooser.setBounds(r.withSizeKeepingCentre(450, 30).translated(0, 80));
 }
 
@@ -207,19 +212,18 @@ void FirmwareChooserScreen::buttonClicked(Button* b)
 					if (!compatibleHW)
 					{
 						bool hwResult = AlertWindow::showOkCancelBox(AlertWindow::WarningIcon, "Incompatible Hardware revision", "The selected firmware is made for a different revision that the connected props \
-(props are rev " + Firmware::getHwRevNameforHwRev(targetHW) + ", firmware is rev " + Firmware::getHwRevNameforHwRev(fw->hwRev)
-+"\nAre you SURE you want to use this firmware ?", "Yes", "No");
+(props are rev " + Firmware::getHwRevNameforHwRev(targetHW) + ", firmware is rev " + Firmware::getHwRevNameforHwRev(fw->hwRev) + "\nAre you SURE you want to use this firmware ?",
+																	 "Yes", "No");
 
 						if (!hwResult)
 						{
 							FirmwareManager::getInstance()->localFirmware.reset();
 						}
-
 					}
 				}
 			}
 
-			
+
 
 			updateVisibility();
 		}

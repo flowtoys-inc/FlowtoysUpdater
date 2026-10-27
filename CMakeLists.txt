@@ -5,7 +5,8 @@ set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
 
 # Single source of truth for the app version. A release tag must match this
 # exactly, or the in-app self-updater will never find the published artifact.
-project(FlowtoysUpdater VERSION 1.2.0 LANGUAGES C CXX)
+# release-please bumps it (the marker below); never edit it by hand.
+project(FlowtoysUpdater VERSION 1.2.0 LANGUAGES C CXX) # x-release-please-version
 
 set(CMAKE_OSX_DEPLOYMENT_TARGET "10.13" CACHE STRING "Minimum macOS version")
 
@@ -102,6 +103,22 @@ target_link_libraries(FlowtoysUpdater PRIVATE
     juce::juce_recommended_config_flags)
 
 juce_generate_juce_header(FlowtoysUpdater)
+
+# Warnings stay on everywhere; -Werror is opt-in (CI turns it on) so a newer
+# compiler with new warnings never breaks a user's build. The flags also reach
+# the JUCE module sources, which JUCE compiles inside each target.
+option(FLOWTOYS_WARNINGS_AS_ERRORS "Treat compiler warnings as errors" OFF)
+function(flowtoys_enable_warnings target)
+    if(MSVC)
+        target_compile_options(${target} PRIVATE /W4 $<$<BOOL:${FLOWTOYS_WARNINGS_AS_ERRORS}>:/WX>)
+    else()
+        target_compile_options(${target} PRIVATE -Wall -Wextra $<$<BOOL:${FLOWTOYS_WARNINGS_AS_ERRORS}>:-Werror>)
+        # Newer SDKs deprecate APIs inside JUCE itself; report those without
+        # failing the build until a JUCE bump catches up.
+        target_compile_options(${target} PRIVATE -Wno-error=deprecated-declarations)
+    endif()
+endfunction()
+flowtoys_enable_warnings(FlowtoysUpdater)
 
 option(FLOWTOYS_BUILD_TESTS "Build the unit tests" ON)
 if(FLOWTOYS_BUILD_TESTS)

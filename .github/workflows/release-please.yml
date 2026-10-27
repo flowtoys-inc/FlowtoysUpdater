@@ -1,0 +1,41 @@
+# Keeps a "chore(master): release x.y.z" PR open that bumps the version in
+# CMakeLists.txt and CHANGELOG.md from Conventional Commits. Merging it tags
+# vX.Y.Z and creates the GitHub Release; release.yml then builds, signs and
+# attaches the binaries. Needs the repo setting that lets Actions create PRs.
+# The release-please job is flowtoys-inc/dev-standards' reusable workflow.
+name: Release Please
+
+on:
+  push:
+    branches: [master]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  release-please:
+    permissions:
+      contents: write
+      pull-requests: write
+    uses: flowtoys-inc/dev-standards/.github/workflows/release-please.yml@36a1fbb92d4868cb87e8db23931e3e6ddd8fae69 # v0.1.0
+
+  # A tag pushed with GITHUB_TOKEN triggers no workflows, so the release
+  # build is called directly rather than on the tag.
+  release:
+    needs: release-please
+    if: needs.release-please.outputs.release_created == 'true'
+    permissions:
+      contents: write
+    uses: ./.github/workflows/release.yml
+    with:
+      tag: ${{ needs.release-please.outputs.tag_name }}
+    secrets:
+      MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
+      MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+      NOTARY_APPLE_ID: ${{ secrets.NOTARY_APPLE_ID }}
+      NOTARY_PASSWORD: ${{ secrets.NOTARY_PASSWORD }}
+      NOTARY_TEAM_ID: ${{ secrets.NOTARY_TEAM_ID }}

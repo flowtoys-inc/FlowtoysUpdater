@@ -1,0 +1,20 @@
+# Conventional Commit PR title + TruffleHog secret scan, in one job, from
+# flowtoys-inc/dev-standards. PRs are squash-merged, so the title becomes
+# the commit release-please reads.
+name: PR checks
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  pr-checks:
+    uses: flowtoys-inc/dev-standards/.github/workflows/pr-checks.yml@36a1fbb92d4868cb87e8db23931e3e6ddd8fae69 # v0.1.0
