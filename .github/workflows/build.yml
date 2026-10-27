@@ -82,16 +82,39 @@ jobs:
           submodules: recursive
           persist-credentials: false
 
+      # The .debs are cached (saved from master only, like the compiler
+      # cache) in a runner-owned directory, so warm runs skip the download.
+      # The key changes whenever this file, and so the package list, does.
+      - name: Restore apt package cache
+        if: runner.os == 'Linux'
+        id: apt-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/apt-archives/*.deb
+          key: apt-${{ matrix.name }}-${{ hashFiles('.github/workflows/build.yml') }}
+          restore-keys: apt-${{ matrix.name }}-
+
       - name: Install Linux dependencies
         if: runner.os == 'Linux'
+        env:
+          APT_ARCHIVES: ${{ runner.temp }}/apt-archives
         run: |
+          mkdir -p "$APT_ARCHIVES/partial"
           sudo apt-get update
-          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            -o Dir::Cache::Archives="$APT_ARCHIVES" \
             libfreetype-dev libfontconfig1-dev \
             libx11-dev libxinerama-dev libxrandr-dev libxcursor-dev libxcomposite-dev libxext-dev libxi-dev \
             libcurl4-openssl-dev libasound2-dev \
-            libusb-1.0-0-dev libudev-dev \
+            libusb-1.0-0-dev libudev-dev pkg-config \
             ninja-build
+
+      - name: Save apt package cache
+        if: runner.os == 'Linux' && github.ref == 'refs/heads/master' && steps.apt-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/apt-archives/*.deb
+          key: apt-${{ matrix.name }}-${{ hashFiles('.github/workflows/build.yml') }}
 
       - name: Install Ninja (macOS)
         if: runner.os == 'macOS'
