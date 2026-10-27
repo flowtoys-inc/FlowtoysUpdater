@@ -106,8 +106,8 @@ Plus the usual launch checks from the bad-dylib incident (#24): `otool -L` on th
 
 Windows signing (against SmartScreen warnings) needs an OV/EV code-signing certificate and a `signtool` step in the workflow — tracked in issue #4.
 
-1.2.0 was the last release cut by hand (tag `1.2.0`, without the `v`). release-please counts from its commit (`last-release-sha` in `release-please-config.json`), so merge `modernize` into `master` with a merge commit, not a squash: a squash drops that commit from `master`'s history. Remove `last-release-sha` once release-please has made its first release. Repo setting needed once: Settings → Actions → General → **Allow GitHub Actions to create and approve pull requests**.
+1.2.0 was the last release cut by hand (tag `1.2.0`, without the `v`). release-please counts from its commit (`last-release-sha` in `release-please-config.json`), and `modernize` was merged into `master` with a merge commit so that commit stays in `master`'s history. Remove `last-release-sha` once release-please has made its first release. Repo setting needed once: Settings → Actions → General → **Allow GitHub Actions to create and approve pull requests**.
 
 ## Dependency updates
 
-Dependabot (`.github/dependabot.yml`) opens one grouped PR per ecosystem a week against `modernize`, for GitHub Actions (SHA pins) and the `ThirdParty/` submodules (JUCE, hidapi). The Catch2 pin in `Tests/CMakeLists.txt` and the clang-format pin in `build.yml` are manual — check [Catch2 releases](https://github.com/catchorg/Catch2/releases) occasionally.
+Dependabot (`.github/dependabot.yml`) opens one grouped PR per ecosystem a week against `master`, for GitHub Actions (SHA pins) and the `ThirdParty/` submodules (JUCE, hidapi). The Catch2 pin in `Tests/CMakeLists.txt` and the clang-format pin in `build.yml` are manual — check [Catch2 releases](https://github.com/catchorg/Catch2/releases) occasionally.

@@ -39,7 +39,7 @@ The app lands in `build/FlowtoysUpdater_artefacts/Release/`. Full per-platform i
 
 Pull requests are welcome. The flowtoys-inc rules for every repo are in [CONTRIBUTING.md](https://github.com/flowtoys-inc/dev-standards/blob/main/CONTRIBUTING.md), with the full version for AI assistants in [CLAUDE.md](https://github.com/flowtoys-inc/dev-standards/blob/main/CLAUDE.md). In short:
 
-- Branch off `modernize`, and give the PR a [Conventional Commit](https://www.conventionalcommits.org/) title such as `fix: keep the firmware list after a failed download`. PRs are squash-merged, and the title drives the version and changelog.
+- Branch off `master`, and give the PR a [Conventional Commit](https://www.conventionalcommits.org/) title such as `fix: keep the firmware list after a failed download`. PRs are squash-merged, and the title drives the version and changelog.
 - Before pushing, format the code and build with warnings as errors:
 
   ```bash
