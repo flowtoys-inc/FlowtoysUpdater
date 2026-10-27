@@ -27,7 +27,7 @@ If only Command Line Tools are selected on the machine, prefix with
 - Format with `uvx clang-format@23.1.3 -i Source/*.cpp Source/*.h Tests/*.cpp`; CI fails on any diff. Build with `-DFLOWTOYS_WARNINGS_AS_ERRORS=ON` before pushing (CI does).
 - Runners are pinned to the newest GA images. The shipped Linux binary is built in an `ubuntu:22.04` container on purpose (glibc only works forward); don't move that to a newer distro.
 
-- Integration branch is `modernize`; all work lands there via PRs from feature branches. `master` changes only by approved PR from `modernize`.
+- `master` is the only long-lived branch (the old `modernize` integration branch was merged in for 1.2.0 and retired). All work lands via squash-merged PRs from feature branches into `master`.
 - GitHub Actions are pinned to commit SHAs (version in a trailing comment); dependabot maintains pins + submodules.
 - Do not compile `Source/hid.c` / `Source/hid_osx.c` (legacy vendored hidapi; the submodule replaces them — deletion tracked in #7).
 

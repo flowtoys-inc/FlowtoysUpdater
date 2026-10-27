@@ -2,7 +2,7 @@ name: Build
 
 on:
   push:
-    branches: [modernize, master]
+    branches: [master]
     paths-ignore: ['**.md', 'docs/**', 'LICENSE']
   pull_request:
     paths-ignore: ['**.md', 'docs/**', 'LICENSE']
