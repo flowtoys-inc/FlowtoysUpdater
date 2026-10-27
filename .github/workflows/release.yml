@@ -11,12 +11,18 @@
 # which works for right-click-open installs but is Gatekeeper-blocked
 # on normal download. Publishing to flow-toys.com (and updating the
 # server's update.json) remains a manual step.
+#
+# Running the workflow by hand (Actions → Release → Run workflow) is a
+# dry run: it builds, signs and notarizes exactly like a tagged release,
+# using the CMakeLists.txt version, but only uploads workflow artifacts
+# and never publishes a GitHub Release.
 
 name: Release
 
 on:
   push:
     tags: ['[0-9]*.*.*']
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -25,16 +31,24 @@ jobs:
   check-version:
     name: Verify tag matches project version
     runs-on: ubuntu-22.04
+    outputs:
+      version: ${{ steps.version.outputs.version }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Compare tag with CMakeLists.txt VERSION
+        id: version
         run: |
           CMAKE_VERSION=$(sed -nE 's/^project\(FlowtoysUpdater VERSION ([0-9.]+).*/\1/p' CMakeLists.txt)
-          echo "CMakeLists.txt version: $CMAKE_VERSION — tag: $GITHUB_REF_NAME"
-          if [ "$CMAKE_VERSION" != "$GITHUB_REF_NAME" ]; then
-            echo "::error::Tag '$GITHUB_REF_NAME' != project VERSION '$CMAKE_VERSION'. The self-updater derives download filenames from the compiled-in version; a mismatch publishes artifacts the app can never find. Bump CMakeLists.txt and re-tag."
-            exit 1
+          if [ "$GITHUB_EVENT_NAME" = "push" ]; then
+            echo "CMakeLists.txt version: $CMAKE_VERSION — tag: $GITHUB_REF_NAME"
+            if [ "$CMAKE_VERSION" != "$GITHUB_REF_NAME" ]; then
+              echo "::error::Tag '$GITHUB_REF_NAME' != project VERSION '$CMAKE_VERSION'. The self-updater derives download filenames from the compiled-in version; a mismatch publishes artifacts the app can never find. Bump CMakeLists.txt and re-tag."
+              exit 1
+            fi
+          else
+            echo "Dry run of $GITHUB_REF_NAME at CMakeLists.txt version $CMAKE_VERSION (nothing will be published)"
           fi
+          echo "version=$CMAKE_VERSION" >> "$GITHUB_OUTPUT"
 
   macos:
     name: macOS
@@ -45,7 +59,10 @@ jobs:
       # presence through env. Values are only "true"/"false".
       HAVE_SIGNING: ${{ secrets.MACOS_CERTIFICATE != '' && secrets.MACOS_CERTIFICATE_PASSWORD != '' }}
       HAVE_NOTARIZATION: ${{ secrets.NOTARY_APPLE_ID != '' && secrets.NOTARY_PASSWORD != '' && secrets.NOTARY_TEAM_ID != '' }}
+      # Set by the import step once it has looked inside the .p12.
+      HAVE_INSTALLER_SIGNING: 'false'
       APP: build/FlowtoysUpdater_artefacts/Release/FlowtoysUpdater.app
+      VERSION: ${{ needs.check-version.outputs.version }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -65,11 +82,35 @@ jobs:
         run: |
           echo "$MACOS_CERTIFICATE" | base64 --decode > certificate.p12
           security create-keychain -p ci-keychain-pass build.keychain
+          # Don't auto-lock mid-job (the default locks after 5 minutes idle).
+          security set-keychain-settings -lut 21600 build.keychain
+          # Put build.keychain first in the search list, keeping the rest.
+          # shellcheck disable=SC2046 # one keychain path per word, no spaces
+          security list-keychains -d user -s build.keychain $(security list-keychains -d user | tr -d '"')
           security default-keychain -s build.keychain
           security unlock-keychain -p ci-keychain-pass build.keychain
-          security import certificate.p12 -k build.keychain -P "$MACOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          security import certificate.p12 -k build.keychain -P "$MACOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign -T /usr/bin/pkgbuild
           security set-key-partition-list -S apple-tool:,apple: -s -k ci-keychain-pass build.keychain
           rm certificate.p12
+          # Keychain Access exports only the leaf certs, and runner images
+          # don't reliably ship Apple's Developer ID intermediate, without
+          # which codesign can't build the chain. Pinned by fingerprint.
+          curl -fsSL -o DeveloperIDG2CA.cer https://www.apple.com/certificateauthority/DeveloperIDG2CA.cer
+          echo "f16cd3c54c7f83cea4bf1a3e6a0819c8aaa8e4a1528fd144715f350643d2df3a  DeveloperIDG2CA.cer" | shasum -a 256 -c
+          security import DeveloperIDG2CA.cer -k build.keychain
+          rm DeveloperIDG2CA.cer
+          security find-identity -v -p codesigning build.keychain
+          if ! security find-identity -v -p codesigning build.keychain | grep -q '"Developer ID Application: '; then
+            echo "::error::MACOS_CERTIFICATE has no valid Developer ID Application identity."
+            exit 1
+          fi
+          # The Installer cert is optional: without it the .pkg ships unsigned
+          # and un-notarized, but the app inside it (and the zip) still are.
+          if security find-identity -v -p basic build.keychain | grep -q '"Developer ID Installer: '; then
+            echo "HAVE_INSTALLER_SIGNING=true" >> "$GITHUB_ENV"
+          else
+            echo "::warning::MACOS_CERTIFICATE has no Developer ID Installer identity; the .pkg will be unsigned."
+          fi
 
       - name: Sign app
         if: env.HAVE_SIGNING == 'true'
@@ -77,7 +118,7 @@ jobs:
 
       - name: Package zip and pkg
         run: |
-          V="$GITHUB_REF_NAME"
+          V="$VERSION"
           if [ "$HAVE_SIGNING" != "true" ]; then
             # No Developer ID: seal the bundle with an ad-hoc signature, or
             # quarantined downloads get killed at launch on newer macOS (#24).
@@ -90,7 +131,7 @@ jobs:
           cp launchApp.sh pkg-scripts/postinstall
           chmod +x pkg-scripts/postinstall
           SIGN_ARGS=()
-          if [ "$HAVE_SIGNING" = "true" ]; then SIGN_ARGS=(--sign "Developer ID Installer"); fi
+          if [ "$HAVE_INSTALLER_SIGNING" = "true" ]; then SIGN_ARGS=(--sign "Developer ID Installer" --timestamp); fi
           pkgbuild --component "$APP" \
                    --install-location /Applications \
                    --identifier com.benkuper.flowtoysupdater \
@@ -100,19 +141,50 @@ jobs:
                    "FlowtoysUpdater-osx-$V.pkg"
 
       - name: Notarize and staple
-        if: env.HAVE_NOTARIZATION == 'true'
+        # Apple rejects anything not signed with a Developer ID, so there is
+        # nothing to notarize without the signing secrets.
+        if: env.HAVE_SIGNING == 'true' && env.HAVE_NOTARIZATION == 'true'
         env:
           NOTARY_APPLE_ID: ${{ secrets.NOTARY_APPLE_ID }}
           NOTARY_PASSWORD: ${{ secrets.NOTARY_PASSWORD }}
           NOTARY_TEAM_ID: ${{ secrets.NOTARY_TEAM_ID }}
         run: |
-          V="$GITHUB_REF_NAME"
+          V="$VERSION"
           AUTH=(--apple-id "$NOTARY_APPLE_ID" --password "$NOTARY_PASSWORD" --team-id "$NOTARY_TEAM_ID")
-          xcrun notarytool submit "FlowtoysUpdater-osx-$V.zip" "${AUTH[@]}" --wait
+          # notarytool can exit 0 on a rejected submission; check the status
+          # and print Apple's log so a rejection is debuggable from CI.
+          notarize() {
+            local out id status
+            out=$(xcrun notarytool submit "$1" "${AUTH[@]}" --wait --output-format json)
+            echo "$out"
+            id=$(echo "$out" | plutil -extract id raw -)
+            status=$(echo "$out" | plutil -extract status raw -)
+            if [ "$status" != "Accepted" ]; then
+              xcrun notarytool log "$id" "${AUTH[@]}"
+              echo "::error::Notarization of $1 finished as '$status'."
+              return 1
+            fi
+          }
+          notarize "FlowtoysUpdater-osx-$V.zip"
           xcrun stapler staple "$APP"
+          rm "FlowtoysUpdater-osx-$V.zip"
           ditto -c -k --keepParent "$APP" "FlowtoysUpdater-osx-$V.zip"
-          xcrun notarytool submit "FlowtoysUpdater-osx-$V.pkg" "${AUTH[@]}" --wait
-          xcrun stapler staple "FlowtoysUpdater-osx-$V.pkg"
+          if [ "$HAVE_INSTALLER_SIGNING" = "true" ]; then
+            notarize "FlowtoysUpdater-osx-$V.pkg"
+            xcrun stapler staple "FlowtoysUpdater-osx-$V.pkg"
+          fi
+
+      - name: Verify signatures
+        if: env.HAVE_SIGNING == 'true'
+        run: |
+          V="$VERSION"
+          codesign --verify --deep --strict --verbose=2 "$APP"
+          codesign -dv "$APP" 2>&1 | grep -E '^(Authority|TeamIdentifier|Timestamp|Runtime)'
+          if [ "$HAVE_NOTARIZATION" = "true" ]; then xcrun stapler validate "$APP"; fi
+          if [ "$HAVE_INSTALLER_SIGNING" = "true" ]; then
+            pkgutil --check-signature "FlowtoysUpdater-osx-$V.pkg"
+            if [ "$HAVE_NOTARIZATION" = "true" ]; then xcrun stapler validate "FlowtoysUpdater-osx-$V.pkg"; fi
+          fi
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -125,6 +197,8 @@ jobs:
     name: Windows
     needs: check-version
     runs-on: windows-2022
+    env:
+      VERSION: ${{ needs.check-version.outputs.version }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -137,7 +211,7 @@ jobs:
         run: cmake --build build --config Release --parallel
 
       - name: Build installer
-        run: iscc /DApplicationVersion=$env:GITHUB_REF_NAME install.iss
+        run: iscc /DApplicationVersion=$env:VERSION install.iss
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -148,6 +222,8 @@ jobs:
     name: Linux
     needs: check-version
     runs-on: ubuntu-22.04
+    env:
+      VERSION: ${{ needs.check-version.outputs.version }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -171,7 +247,7 @@ jobs:
       - name: Package
         run: |
           cd build/FlowtoysUpdater_artefacts/Release
-          zip -r "$GITHUB_WORKSPACE/FlowtoysUpdater-linux-$GITHUB_REF_NAME.zip" FlowtoysUpdater
+          zip -r "$GITHUB_WORKSPACE/FlowtoysUpdater-linux-$VERSION.zip" FlowtoysUpdater
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -180,6 +256,8 @@ jobs:
 
   publish:
     name: Publish GitHub Release
+    # Manual runs are dry runs: their artifacts stay on the workflow run.
+    if: github.event_name == 'push'
     needs: [macos, windows, linux]
     runs-on: ubuntu-22.04
     steps:

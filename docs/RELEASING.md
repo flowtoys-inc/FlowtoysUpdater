@@ -17,15 +17,16 @@ Every part of the pipeline — the CMake project version, the git tag, the CI ar
 ## Release checklist
 
 1. **Bump the version** in `CMakeLists.txt`: `project(FlowtoysUpdater VERSION x.y.z)`. Land that on `modernize`/`master` via PR.
-2. **Tag** the release commit: `git tag x.y.z && git push origin x.y.z`.
-3. CI (`.github/workflows/release.yml`) then:
+2. **Dry run** the release from the commit you're about to tag: Actions → Release → Run workflow, pick the branch. It builds, signs and notarizes exactly like a tagged release (named with the CMake version) but only keeps the files as workflow artifacts — no tag check, no GitHub Release. Download `release-macos` and run the [verification checks](#verifying-a-signed-build) on it. Do this after any change to signing secrets or the workflow.
+3. **Tag** the release commit: `git tag x.y.z && git push origin x.y.z`.
+4. CI (`.github/workflows/release.yml`) then:
    - verifies the tag matches the CMake version (hard failure if not),
    - builds macOS (universal arm64+x86_64), Windows (x64, static CRT), Linux,
    - packages `FlowtoysUpdater-osx-x.y.z.zip`, `FlowtoysUpdater-osx-x.y.z.pkg` (pkgbuild, installs to `/Applications`, auto-launches after install), `FlowtoysUpdater-win-x64-x.y.z.exe` (Inno Setup), `FlowtoysUpdater-linux-x.y.z.zip`,
    - signs/notarizes the macOS artifacts **only if signing secrets are configured** (below),
    - creates a GitHub Release with all artifacts.
-4. **Smoke-test on hardware** — flash a real prop with the built app. CI cannot test the HID path.
-5. **Publish to flow-toys.com** (manual until server automation exists):
+5. **Smoke-test on hardware** — flash a real prop with the built app. CI cannot test the HID path.
+6. **Publish to flow-toys.com** (manual until server automation exists):
    - upload the artifacts to `http://flow-toys.com/fusion/app/`,
    - update `http://flow-toys.com/fusion/update.json` (schema below). Existing installs poll this file — nothing reaches users until it changes.
 
@@ -55,17 +56,53 @@ Unsigned builds work locally but are Gatekeeper-blocked when downloaded. The rel
 
 | Secret | Contents |
 |---|---|
-| `MACOS_CERTIFICATE` | base64 of a `.p12` containing **Developer ID Application** (and Installer) certificates: `base64 -i certs.p12` |
+| `MACOS_CERTIFICATE` | base64 of a `.p12` containing the **Developer ID Application** certificate and, ideally, the **Developer ID Installer** certificate: `base64 -i certs.p12` |
 | `MACOS_CERTIFICATE_PASSWORD` | password of that `.p12` |
-| `NOTARY_APPLE_ID` | Apple ID email used for notarization |
-| `NOTARY_PASSWORD` | app-specific password for that Apple ID (appleid.apple.com → App-Specific Passwords) |
-| `NOTARY_TEAM_ID` | the 10-character Team ID |
+| `NOTARY_APPLE_ID` | Apple ID email used for notarization (a team member's own Apple ID) |
+| `NOTARY_PASSWORD` | app-specific password for that Apple ID (account.apple.com → Sign-In and Security → App-Specific Passwords) |
+| `NOTARY_TEAM_ID` | the 10-character Team ID: `YLHB8LP34S` (Flowtoys, Inc.) |
+
+What each combination produces:
+
+- **Application cert + notary secrets:** signed (hardened runtime, timestamped) and notarized app, stapled in the zip and inside the pkg.
+- **Installer cert too:** the `.pkg` is also signed, notarized and stapled. Without it the job warns and ships an unsigned `.pkg` around the signed app; the zip is unaffected.
+- **No signing secrets:** ad-hoc signed app (right-click → Open on first launch), unsigned pkg, no notarization.
+
+The job fails, rather than shipping something half-signed, if the `.p12` lacks a valid Developer ID Application identity or Apple rejects a notarization (Apple's log is printed).
 
 ### Getting the certificates (one-time)
 
-1. Enroll in the [Apple Developer Program](https://developer.apple.com/programs/enroll/) — $99/year. Prefer enrolling **flowtoys as an organization** (requires a D-U-N-S number and someone with signing authority; certificates then say "flowtoys" rather than a person's name). Individual enrollment also works and is faster.
-2. In Xcode (Settings → Accounts → Manage Certificates) or at developer.apple.com, create **Developer ID Application** and **Developer ID Installer** certificates.
-3. Export both (with private keys) from Keychain Access as a single `.p12`, then fill in the secrets above.
+Flowtoys, Inc. is enrolled as an organization (Team ID `YLHB8LP34S`). Only the team's **Account Holder** can create Developer ID certificates; Admins and other roles see them greyed out. Cloud-managed Developer ID certificates (Xcode, Admin role) can't be exported, so they don't work for CI.
+
+So a maintainer who isn't the Account Holder does this, keeping the private key on their own Mac:
+
+1. Keychain Access → Certificate Assistant → **Request a Certificate From a Certificate Authority**. Your email, a descriptive Common Name (e.g. `FlowtoysUpdater signing`), CA Email left blank, **Saved to disk**. The private key stays in your login keychain.
+2. Send the `.certSigningRequest` to the Account Holder (it contains no secrets). At developer.apple.com → Certificates → **+**, they choose **Developer ID Application** (profile type **G2 Sub-CA**), upload the CSR, and send back the downloaded `.cer`.
+3. **Repeat with a new CSR** (e.g. `FlowtoysUpdater installer`) for **Developer ID Installer**. Apple refuses to reuse a CSR for a second certificate.
+4. Double-click each `.cer`. Check with `security find-identity -v -p basic`: both `Developer ID Application: Flowtoys, Inc. (YLHB8LP34S)` and `Developer ID Installer: …` should be listed.
+5. Keychain Access → My Certificates → select both → Export 2 items → `.p12` with a strong password. Keep the `.p12` and password in a password manager; the private keys exist nowhere else.
+6. Set the secrets (repo **write** access is enough), then delete the `.p12` from disk:
+   ```bash
+   base64 -i certs.p12 | gh secret set MACOS_CERTIFICATE -R flowtoys-inc/FlowtoysUpdater
+   for s in MACOS_CERTIFICATE_PASSWORD NOTARY_APPLE_ID NOTARY_PASSWORD NOTARY_TEAM_ID; do gh secret set "$s" -R flowtoys-inc/FlowtoysUpdater; done
+   ```
+
+Before trusting the notary secrets in CI, check them locally: `xcrun notarytool store-credentials flowtoys --apple-id <you> --team-id YLHB8LP34S`, then `xcrun notarytool history --keychain-profile flowtoys` should succeed.
+
+The Developer ID Application certificate issued in Oct 2026 expires **Nov 26, 2027**. Renew it before then with the same CSR steps. Builds already shipped keep working after expiry because their signatures are timestamped; only new signing stops.
+
+### Verifying a signed build
+
+On the downloaded artifact (dry run or release), on a Mac that didn't build it:
+
+```bash
+ditto -x -k FlowtoysUpdater-osx-x.y.z.zip /tmp/ftu
+spctl --assess --type execute -vv /tmp/ftu/FlowtoysUpdater.app   # accepted, source=Notarized Developer ID
+xcrun stapler validate /tmp/ftu/FlowtoysUpdater.app
+spctl --assess --type install -vv FlowtoysUpdater-osx-x.y.z.pkg  # only if the Installer cert was present
+```
+
+Plus the usual launch checks from the bad-dylib incident (#24): `otool -L` on the binary shows only system libraries, and the quarantined download opens with a double-click.
 
 Windows signing (against SmartScreen warnings) needs an OV/EV code-signing certificate and a `signtool` step in the workflow — tracked in issue #4.
 
