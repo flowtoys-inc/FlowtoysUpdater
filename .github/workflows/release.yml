@@ -12,16 +12,20 @@
 # on normal download. Publishing to flow-toys.com (and updating the
 # server's update.json) remains a manual step.
 #
-# Running the workflow by hand (Actions → Release → Run workflow) is a
-# dry run: it builds, signs and notarizes exactly like a tagged release,
-# using the CMakeLists.txt version, but only uploads workflow artifacts
-# and never publishes a GitHub Release.
+# Anything other than a version tag is a dry run: it builds, signs and
+# notarizes exactly like a tagged release, using the CMakeLists.txt
+# version, but only uploads workflow artifacts and never publishes a
+# GitHub Release. Start one by pushing any commit to the release-dry-run
+# branch (git push -f origin <ref>:release-dry-run), or with Actions →
+# Release → Run workflow once this file is on the default branch
+# (GitHub only offers manual runs for workflows that exist there).
 
 name: Release
 
 on:
   push:
     tags: ['[0-9]*.*.*']
+    branches: [release-dry-run]
   workflow_dispatch:
 
 permissions:
@@ -39,7 +43,7 @@ jobs:
         id: version
         run: |
           CMAKE_VERSION=$(sed -nE 's/^project\(FlowtoysUpdater VERSION ([0-9.]+).*/\1/p' CMakeLists.txt)
-          if [ "$GITHUB_EVENT_NAME" = "push" ]; then
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
             echo "CMakeLists.txt version: $CMAKE_VERSION — tag: $GITHUB_REF_NAME"
             if [ "$CMAKE_VERSION" != "$GITHUB_REF_NAME" ]; then
               echo "::error::Tag '$GITHUB_REF_NAME' != project VERSION '$CMAKE_VERSION'. The self-updater derives download filenames from the compiled-in version; a mismatch publishes artifacts the app can never find. Bump CMakeLists.txt and re-tag."
@@ -256,8 +260,9 @@ jobs:
 
   publish:
     name: Publish GitHub Release
-    # Manual runs are dry runs: their artifacts stay on the workflow run.
-    if: github.event_name == 'push'
+    # Only version tags publish. Dry runs (release-dry-run pushes, manual
+    # runs) keep their artifacts on the workflow run.
+    if: github.ref_type == 'tag'
     needs: [macos, windows, linux]
     runs-on: ubuntu-22.04
     steps:

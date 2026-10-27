@@ -17,7 +17,7 @@ Every part of the pipeline — the CMake project version, the git tag, the CI ar
 ## Release checklist
 
 1. **Bump the version** in `CMakeLists.txt`: `project(FlowtoysUpdater VERSION x.y.z)`. Land that on `modernize`/`master` via PR.
-2. **Dry run** the release from the commit you're about to tag: Actions → Release → Run workflow, pick the branch. It builds, signs and notarizes exactly like a tagged release (named with the CMake version) but only keeps the files as workflow artifacts — no tag check, no GitHub Release. Download `release-macos` and run the [verification checks](#verifying-a-signed-build) on it. Do this after any change to signing secrets or the workflow.
+2. **Dry run** the release from the commit you're about to tag by pushing it to the `release-dry-run` branch: `git push -f origin <branch-or-sha>:release-dry-run`. (Actions → Release → Run workflow does the same, but GitHub only offers it once `release.yml` is on the default branch, `master`.) It builds, signs and notarizes exactly like a tagged release (named with the CMake version) but only keeps the files as workflow artifacts — no tag check, no GitHub Release. Download `release-macos` and run the [verification checks](#verifying-a-signed-build) on it. Do this after any change to signing secrets or the workflow.
 3. **Tag** the release commit: `git tag x.y.z && git push origin x.y.z`.
 4. CI (`.github/workflows/release.yml`) then:
    - verifies the tag matches the CMake version (hard failure if not),
