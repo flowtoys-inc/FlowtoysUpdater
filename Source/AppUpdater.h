@@ -13,14 +13,35 @@
 #include "JuceHeader.h"
 #include "QueuedNotifier.h"
 
-class  AppUpdateEvent
+class AppUpdateEvent
 {
 public:
-	enum Type { UPDATE_AVAILABLE, DOWNLOAD_STARTED, DOWNLOAD_PROGRESS, DOWNLOAD_ERROR, UPDATE_FINISHED };
+	enum Type
+	{
+		UPDATE_AVAILABLE,
+		DOWNLOAD_STARTED,
+		DOWNLOAD_PROGRESS,
+		DOWNLOAD_ERROR,
+		UPDATE_FINISHED
+	};
 
-	AppUpdateEvent(Type t, File f = File()) : type(t), file(f) {}
-	AppUpdateEvent(Type t, String title, String msg, String changelog) : type(t), title(title), msg(msg), changelog(changelog) {}
-	AppUpdateEvent(Type t, float progression) : type(t), progression(progression) {}
+	AppUpdateEvent(Type t, File f = File()) :
+		type(t),
+		file(f)
+	{
+	}
+	AppUpdateEvent(Type t, String title, String msg, String changelog) :
+		type(t),
+		title(title),
+		msg(msg),
+		changelog(changelog)
+	{
+	}
+	AppUpdateEvent(Type t, float progression) :
+		type(t),
+		progression(progression)
+	{
+	}
 	Type type;
 	File file;
 
@@ -34,10 +55,9 @@ public:
 typedef QueuedNotifier<AppUpdateEvent>::Listener AppUpdaterAsyncListener;
 
 
-class UpdateDialogWindow :
-	public Component,
-	public Button::Listener,
-	public AppUpdaterAsyncListener
+class UpdateDialogWindow : public Component,
+						   public Button::Listener,
+						   public AppUpdaterAsyncListener
 {
 public:
 	UpdateDialogWindow(const String &msg, const String &changelog);
@@ -59,17 +79,14 @@ public:
 
 	void newMessage(const AppUpdateEvent &e) override;
 
-	void buttonClicked(Button * b) override;
-
+	void buttonClicked(Button *b) override;
 };
 
 
 
-
-class AppUpdater :
-	public Thread,
-	public URL::DownloadTask::Listener,
-	public AppUpdaterAsyncListener
+class AppUpdater : public Thread,
+				   public URL::DownloadTask::Listener,
+				   public AppUpdaterAsyncListener
 {
 public:
 	juce_DeclareSingleton(AppUpdater, true);
@@ -87,14 +104,14 @@ public:
 	String fileExtension;
 
 	std::unique_ptr<UpdateDialogWindow> updateWindow;
-	
+
 	float progression;
 
 	std::unique_ptr<URL::DownloadTask> downloadTask;
 
 	void setURLs(URL _updateURL, String _downloadURLBase, String filePrefix);
 
-	String getDownloadFileName(String version, String extension); 
+	String getDownloadFileName(String version, String extension);
 	void checkForUpdates();
 
 	void showDialog(String title, String msg, String changelog);
@@ -107,14 +124,13 @@ public:
 	virtual void run() override;
 
 	// Inherited via Listener
-	virtual void finished(URL::DownloadTask * task, bool success) override;
-	virtual void progress(URL::DownloadTask* task, int64 bytesDownloaded, int64 totalLength) override;
-	
+	virtual void finished(URL::DownloadTask *task, bool success) override;
+	virtual void progress(URL::DownloadTask *task, int64 bytesDownloaded, int64 totalLength) override;
+
 	virtual void newMessage(const AppUpdateEvent &e) override;
 
 	QueuedNotifier<AppUpdateEvent> queuedNotifier;
-	void addAsyncUpdateListener(AppUpdaterAsyncListener* newListener) { queuedNotifier.addListener(newListener); }
-	void addAsyncCoalescedUpdateListener(AppUpdaterAsyncListener* newListener) { queuedNotifier.addAsyncCoalescedListener(newListener); }
-	void removeAsyncUpdateListener(AppUpdaterAsyncListener* listener) { queuedNotifier.removeListener(listener); }
+	void addAsyncUpdateListener(AppUpdaterAsyncListener *newListener) { queuedNotifier.addListener(newListener); }
+	void addAsyncCoalescedUpdateListener(AppUpdaterAsyncListener *newListener) { queuedNotifier.addAsyncCoalescedListener(newListener); }
+	void removeAsyncUpdateListener(AppUpdaterAsyncListener *listener) { queuedNotifier.removeListener(listener); }
 };
-

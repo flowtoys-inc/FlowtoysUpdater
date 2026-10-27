@@ -11,9 +11,8 @@
 #pragma once
 #include "Screen.h"
 
-class EndScreen : 
-	public AppScreen,
-	public Button::Listener
+class EndScreen : public AppScreen,
+				  public Button::Listener
 {
 public:
 	EndScreen();
@@ -29,6 +28,4 @@ public:
 	virtual void buttonClicked(Button *) override;
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(EndScreen)
-
-		
 };

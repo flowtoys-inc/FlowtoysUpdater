@@ -18,9 +18,18 @@
 class Firmware
 {
 public:
-	Firmware(MemoryBlock data, int totalBytesToSend, var meta,  String infos, String versionString, float version, int hwRev, int pid, int vid) :
-		data(data), totalBytesToSend(totalBytesToSend), infos(infos), meta(meta),  versionString(versionString), version(version), hwRev(hwRev), pid(pid), vid(vid)
-	{}
+	Firmware(MemoryBlock data, int totalBytesToSend, var meta, String infos, String versionString, float version, int hwRev, int pid, int vid) :
+		data(data),
+		totalBytesToSend(totalBytesToSend),
+		infos(infos),
+		meta(meta),
+		versionString(versionString),
+		version(version),
+		hwRev(hwRev),
+		pid(pid),
+		vid(vid)
+	{
+	}
 
 	MemoryBlock data;
 	int totalBytesToSend;
@@ -58,22 +67,21 @@ public:
 	}
 };
 
-class FirmwareManager :
-	public Thread,
-	public URL::DownloadTask::Listener,
-	public Timer
+class FirmwareManager : public Thread,
+						public URL::DownloadTask::Listener,
+						public Timer
 {
 public:
-	juce_DeclareSingleton(FirmwareManager,true)
+	juce_DeclareSingleton(FirmwareManager, true)
 
-	FirmwareManager();
+		FirmwareManager();
 	~FirmwareManager();
 
 	FirmwareComparator comparator;
- 
+
 	const String remoteHost = "http://flow-toys.com/fusion/";
 	File firmwareFolder;
-    OwnedArray<URL::DownloadTask> tasks;
+	OwnedArray<URL::DownloadTask> tasks;
 
 	//shared_ptr everywhere: the hourly refresh clears the list from the
 	//background thread while the UI (and a running flash) may still hold
@@ -104,8 +112,8 @@ public:
 	virtual void run() override;
 
 	// Inherited via Listener
-    virtual void progress (URL::DownloadTask* task, int64 bytesDownloaded, int64 totalLength) override;
-    virtual void finished(URL::DownloadTask * task, bool success) override;
+	virtual void progress(URL::DownloadTask* task, int64 bytesDownloaded, int64 totalLength) override;
+	virtual void finished(URL::DownloadTask* task, bool success) override;
 
 
 	void timerCallback() override;
@@ -113,8 +121,16 @@ public:
 	class FirmwareManagerEvent
 	{
 	public:
-		enum Type { FIRMWARE_LOAD_PROGRESS, FIRMWARE_LOADED, FIRMWARE_LOAD_ERROR };
-		FirmwareManagerEvent(Type type) : type(type) {}
+		enum Type
+		{
+			FIRMWARE_LOAD_PROGRESS,
+			FIRMWARE_LOADED,
+			FIRMWARE_LOAD_ERROR
+		};
+		FirmwareManagerEvent(Type type) :
+			type(type)
+		{
+		}
 
 		Type type;
 	};

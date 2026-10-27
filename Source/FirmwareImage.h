@@ -33,13 +33,13 @@ struct FirmwareImage
 	{
 		switch (hwRev)
 		{
-		case 0: return "notset";
-		case 0x300: return "C";
-		case 0x400: return "D";
-		case 0x500: return "E";
-		case 0x600: return "F";
-		case 0x700: return "G";
-		case 0x800: return "H";
+			case 0: return "notset";
+			case 0x300: return "C";
+			case 0x400: return "D";
+			case 0x500: return "E";
+			case 0x600: return "F";
+			case 0x700: return "G";
+			case 0x800: return "H";
 		}
 
 		return "unknown";

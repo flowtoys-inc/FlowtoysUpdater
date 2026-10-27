@@ -14,7 +14,6 @@ AppScreen::AppScreen(const String &screenName, ScreenID id) :
 	Component(screenName),
 	id(id)
 {
-
 }
 
 AppScreen::~AppScreen()

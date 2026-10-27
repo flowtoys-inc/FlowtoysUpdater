@@ -1,8 +1,8 @@
 #include <catch2/catch_test_macros.hpp>
 #include "VersionUtils.h"
 
-using VersionUtils::versionIsNewerThan;
 using VersionUtils::compareVersionsDescending;
+using VersionUtils::versionIsNewerThan;
 
 TEST_CASE("versionIsNewerThan orders dotted versions numerically")
 {
@@ -42,12 +42,9 @@ TEST_CASE("multi-digit segments compare as numbers, not as floats")
 
 TEST_CASE("download filename follows the self-updater contract")
 {
-	CHECK(VersionUtils::downloadFileName("FlowtoysUpdater", "osx", "1.2.0", "zip")
-	      == "FlowtoysUpdater-osx-1.2.0.zip");
-	CHECK(VersionUtils::downloadFileName("FlowtoysUpdater", "win-x64", "1.2.0", "exe")
-	      == "FlowtoysUpdater-win-x64-1.2.0.exe");
-	CHECK(VersionUtils::downloadFileName("FlowtoysUpdater", "linux", "1.2.0", "zip")
-	      == "FlowtoysUpdater-linux-1.2.0.zip");
+	CHECK(VersionUtils::downloadFileName("FlowtoysUpdater", "osx", "1.2.0", "zip") == "FlowtoysUpdater-osx-1.2.0.zip");
+	CHECK(VersionUtils::downloadFileName("FlowtoysUpdater", "win-x64", "1.2.0", "exe") == "FlowtoysUpdater-win-x64-1.2.0.exe");
+	CHECK(VersionUtils::downloadFileName("FlowtoysUpdater", "linux", "1.2.0", "zip") == "FlowtoysUpdater-linux-1.2.0.zip");
 
 	juce::String suffix = VersionUtils::platformOSSuffix();
 	CHECK((suffix == "osx" || suffix == "win-x64" || suffix == "linux"));

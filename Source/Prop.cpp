@@ -10,43 +10,41 @@
 
 #include "Prop.h"
 
-#pragma warning(disable:4189 4244)
+#pragma warning(disable : 4189 4244)
 
 
 
-Prop::Prop(StringRef productString, StringRef serial, hid_device * device, PropType type, int vid, int pid, const wchar_t * serialNumber) :
+Prop::Prop(StringRef productString, StringRef serial, hid_device *device, PropType type, int vid, int pid, const wchar_t *serialNumber) :
 	Thread("Prop"),
 	productString(productString),
 	type(type),
 	serial(serial),
 	dVid(vid),
 	dPid(pid),
-    device(device),
-    deviceAckStatus(0),
-    dSN(serialNumber),
+	device(device),
+	deviceAckStatus(0),
+	dSN(serialNumber),
 	deviceStatus(NotSet),
 	progression(0),
 	infos("[Not set]"),
 	numNoResponses(0),
 	isFlashing(false),
-    queuedNotifier(50)
+	queuedNotifier(50)
 {
-	
-    if(!this->productString.toLowerCase().contains("bootloader"))
-    {
-        DBG("App mode, reset to bootloader");
-        sendAppReset(Subject::Bootloader);
-        sendGetStatus();
-        return;
-    }
-    
+
+	if (!this->productString.toLowerCase().contains("bootloader"))
+	{
+		DBG("App mode, reset to bootloader");
+		sendAppReset(Subject::Bootloader);
+		sendGetStatus();
+		return;
+	}
+
 	sendGetVersion(Bootloader);
 	sendGetVersion(App);
 
 
 	infos = "firmware: " + fwVersion + ", created: " + fw_date + ", hardware ID: " + String(serialNumber);
-    
-    
 }
 
 Prop::~Prop()
@@ -86,7 +84,7 @@ void Prop::sendUpdate(int _totalBytesToSend)
 	sendPacket(s);
 }
 
-void Prop::sendData(const char* data, int length)
+void Prop::sendData(const char *data, int length)
 {
 	MemoryOutputStream s;
 	s.writeInt(Command::Data);
@@ -106,7 +104,8 @@ void Prop::sendGetStatus()
 		numNoResponses = 0; //only *consecutive* misses count towards a disconnect
 
 		uint8_t cmd = result->readByte();
-		for (int i = 0; i < 3; i++) result->readByte(); //2 useless bytes
+		for (int i = 0; i < 3; i++)
+			result->readByte(); //2 useless bytes
 		deviceAckStatus = result->readInt();
 		deviceStatus = (Status)result->readByte();
 
@@ -121,7 +120,7 @@ void Prop::sendGetStatus()
 			numNoResponses++;
 			if (numNoResponses >= 20) deviceStatus = Error;
 		}
-		
+
 		DBG("NO RESPONSE ! ");
 	}
 }
@@ -141,10 +140,13 @@ void Prop::sendGetVersion(Subject subject)
 
 		uint8_t cmd = result->readByte();
 
-		if (subject == App) appActive = result->readByte() == 1;
-		else bootloaderActive = result->readByte() == 1;
+		if (subject == App)
+			appActive = result->readByte() == 1;
+		else
+			bootloaderActive = result->readByte() == 1;
 
-		for (int i = 0; i < 2; i++) result->readByte(); //2 bytes padding
+		for (int i = 0; i < 2; i++)
+			result->readByte(); //2 bytes padding
 
 		int _vid = result->readShort();
 		int _pid = result->readShort();
@@ -157,9 +159,9 @@ void Prop::sendGetVersion(Subject subject)
 		String _gitRevString = "unknown";
 		if (CharPointer_ASCII::isValidString(git_rev, std::numeric_limits<int>::max()))
 		{
-			_gitRevString= String(git_rev);
+			_gitRevString = String(git_rev);
 		}
-		
+
 
 
 		if (subject == Bootloader)
@@ -168,7 +170,8 @@ void Prop::sendGetVersion(Subject subject)
 			pid = _pid;
 			hw_rev = _hw_rev;
 			gitRevString = _gitRevString;
-		} else
+		}
+		else
 		{
 			fw_date = Time((int64)(_fw_date * 1000)).toString(true, false);
 			fw_rev = _fw_rev;
@@ -183,20 +186,21 @@ void Prop::sendGetVersion(Subject subject)
 		String fwString = "unknown";
 		if (CharPointer_ASCII::isValidString(fw_ident, std::numeric_limits<int>::max()))
 		{
-			fwString=  String(fw_ident);
+			fwString = String(fw_ident);
 		}
 
 		if (subject == App) fwIdentString = fwString;
 
 		DBG((subject == App ? "App" : "Bootloader") << " version response : cmd = " << (int)cmd << ", appActive = " << (int)appActive << ", bootloader active = " << (int)bootloaderActive << ", vid = " << String::toHexString(vid) << ", pid = " << String::toHexString(pid) << ", hw_rev = " << (int)hw_rev << ", fw_rev = " << fwVersion << ", date = " << fw_date << ", git rev = " << gitRevString << ", fwIdent = " << fwString);
-	} else
+	}
+	else
 	{
 		DBG("Result is null !");
 	}
 }
 
 
-void Prop::sendPacket(MemoryOutputStream & stream, bool prependReportByte)
+void Prop::sendPacket(MemoryOutputStream &stream, bool prependReportByte)
 {
 	if (device == nullptr)
 	{
@@ -207,17 +211,18 @@ void Prop::sendPacket(MemoryOutputStream & stream, bool prependReportByte)
 	MemoryOutputStream data;
 	if (prependReportByte) data.writeByte(0);
 	data.write(stream.getData(), stream.getDataSize());
-	while (data.getDataSize() < PACKET_SIZE + (prependReportByte ? 1 : 0)) data.writeByte(0); //prepend report id
+	while (data.getDataSize() < PACKET_SIZE + (prependReportByte ? 1 : 0))
+		data.writeByte(0); //prepend report id
 
 
-																							  //const unsigned char * d = (const unsigned char *)data.getData();
-																							  //for (int i = 0; i < PACKET_SIZE; i++) DBG("Sending " << i << " : " << (int)d[i]);
+	//const unsigned char * d = (const unsigned char *)data.getData();
+	//for (int i = 0; i < PACKET_SIZE; i++) DBG("Sending " << i << " : " << (int)d[i]);
 
 	hid_write(device, (const unsigned char *)data.getData(), data.getDataSize());
 	//DBG("Send packet " << bytesWritten << " bytes sent");
 }
 
-MemoryInputStream * Prop::readResponse()
+MemoryInputStream *Prop::readResponse()
 {
 	if (device == nullptr)
 	{
@@ -238,19 +243,20 @@ MemoryInputStream * Prop::readResponse()
 
 	if (numRead > 0)
 	{
-		MemoryInputStream * result = new MemoryInputStream(response, numRead, true);
+		MemoryInputStream *result = new MemoryInputStream(response, numRead, true);
 		return result;
-	} else
+	}
+	else
 	{
 		return nullptr;
 	}
 }
 
-void Prop::flash(MemoryBlock * _dataBlock, int _totalBytesToSend)
+void Prop::flash(MemoryBlock *_dataBlock, int _totalBytesToSend)
 {
 	stopThread(3000);
 
-	this->dataBlock= _dataBlock;
+	this->dataBlock = _dataBlock;
 	this->totalBytesToSend = _totalBytesToSend;
 
 	startThread();
@@ -288,7 +294,11 @@ void Prop::run()
 			}
 		}
 
-		if (threadShouldExit()) { isFlashing = false; return; }
+		if (threadShouldExit())
+		{
+			isFlashing = false;
+			return;
+		}
 	}
 
 	sendUpdate(totalBytesToSend);
@@ -353,10 +363,9 @@ void Prop::run()
 			//flashState->setValueWithData(ERROR);
 			progression = 0;
 			isFlashing = false;
-			queuedNotifier.addMessage(new PropEvent(this, PropEvent::FLASH_ERROR, progression)); 
+			queuedNotifier.addMessage(new PropEvent(this, PropEvent::FLASH_ERROR, progression));
 			//return false;
 			return;
-
 		}
 		else if (deviceStatus == ProgramIdle && deviceAckStatus < totalBytesToSend)
 		{
@@ -368,7 +377,6 @@ void Prop::run()
 
 			currentDataOffset = deviceAckStatus;
 			currentPacket++;
-
 		}
 		else if (deviceStatus == ProgramDone)
 		{
@@ -389,7 +397,6 @@ void Prop::run()
 	DBG("Flashing done !");
 	queuedNotifier.addMessage(new PropEvent(this, PropEvent::FLASH_SUCCESS, progression));
 	sendAppReset(Subject::App);
-	
 }
 
 void Prop::setProgression(float value)
@@ -397,4 +404,3 @@ void Prop::setProgression(float value)
 	progression = value;
 	queuedNotifier.addMessage(new PropEvent(this, PropEvent::FLASHING_PROGRESS, progression));
 }
-
