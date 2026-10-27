@@ -11,8 +11,11 @@
 # macOS signing + notarization run only when the corresponding secrets
 # exist (see docs/RELEASING.md); without them the release is unsigned,
 # which works for right-click-open installs but is Gatekeeper-blocked
-# on normal download. Publishing to flow-toys.com (and updating the
-# server's update.json) remains a manual step.
+# on normal download. Windows Authenticode signing (Azure Artifact
+# Signing) is gated the same way; without it the exe and installer are
+# unsigned and SmartScreen shows "Unknown publisher". Publishing to
+# flow-toys.com (and updating the server's update.json) remains a
+# manual step.
 #
 # Tags pushed by hand don't trigger anything: release-please owns versions
 # and tags (docs/RELEASING.md).
@@ -46,10 +49,22 @@ on:
         required: false
       NOTARY_TEAM_ID:
         required: false
+      AZURE_CLIENT_ID:
+        required: false
+      AZURE_TENANT_ID:
+        required: false
+      ARTIFACT_SIGNING_ENDPOINT:
+        required: false
+      ARTIFACT_SIGNING_ACCOUNT:
+        required: false
+      ARTIFACT_SIGNING_PROFILE:
+        required: false
   push:
     branches: [release-dry-run]
   workflow_dispatch:
 
+# Jobs get only what they need: publish writes the release, windows
+# requests an OIDC token for Azure.
 permissions:
   contents: read
 
@@ -231,7 +246,16 @@ jobs:
     needs: check-version
     runs-on: windows-2025
     timeout-minutes: 60
+    # Azure's federated credential trusts this environment, so one
+    # credential covers release-please calls, release-dry-run and manual runs.
+    environment: release
+    permissions:
+      contents: read
+      id-token: write
     env:
+      # Same pattern as macOS: presence only, values "true"/"false".
+      HAVE_SIGNING: ${{ secrets.AZURE_CLIENT_ID != '' && secrets.AZURE_TENANT_ID != '' && secrets.ARTIFACT_SIGNING_ENDPOINT != '' && secrets.ARTIFACT_SIGNING_ACCOUNT != '' && secrets.ARTIFACT_SIGNING_PROFILE != '' }}
+      EXE: build\FlowtoysUpdater_artefacts\Release\FlowtoysUpdater.exe
       VERSION: ${{ needs.check-version.outputs.version }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -245,8 +269,66 @@ jobs:
       - name: Build
         run: cmake --build build --config Release --parallel
 
+      - name: Azure login
+        if: env.HAVE_SIGNING == 'true'
+        uses: azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906 # v3.1.0
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          # Signing needs only the app's role on the signing account.
+          allow-no-subscriptions: true
+
+      # The app exe is signed before Inno Setup packs it, so the installed
+      # copy (and what the self-updater launches) carries the signature.
+      - name: Sign app
+        if: env.HAVE_SIGNING == 'true'
+        uses: azure/artifact-signing-action@c7ab2a863ab5f9a846ddb8265964877ef296ee82 # v2.0.0
+        with:
+          endpoint: ${{ secrets.ARTIFACT_SIGNING_ENDPOINT }}
+          signing-account-name: ${{ secrets.ARTIFACT_SIGNING_ACCOUNT }}
+          certificate-profile-name: ${{ secrets.ARTIFACT_SIGNING_PROFILE }}
+          files: ${{ github.workspace }}\${{ env.EXE }}
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+          description: FlowtoysUpdater
+          description-url: https://flowtoys.com
+
       - name: Build installer
         run: iscc /DApplicationVersion=$env:VERSION install.iss
+
+      - name: Sign installer
+        if: env.HAVE_SIGNING == 'true'
+        uses: azure/artifact-signing-action@c7ab2a863ab5f9a846ddb8265964877ef296ee82 # v2.0.0
+        with:
+          endpoint: ${{ secrets.ARTIFACT_SIGNING_ENDPOINT }}
+          signing-account-name: ${{ secrets.ARTIFACT_SIGNING_ACCOUNT }}
+          certificate-profile-name: ${{ secrets.ARTIFACT_SIGNING_PROFILE }}
+          files: ${{ github.workspace }}\Output\FlowtoysUpdater-win-x64-${{ env.VERSION }}.exe
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+          description: FlowtoysUpdater Setup
+          description-url: https://flowtoys.com
+
+      - name: Verify signatures
+        if: env.HAVE_SIGNING == 'true'
+        run: |
+          # signtool isn't on PATH; take the newest Windows SDK copy.
+          $signtool = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin\*\x64\signtool.exe" |
+            Sort-Object { [version]$_.Directory.Parent.Name } | Select-Object -Last 1 -ExpandProperty FullName
+          foreach ($f in @($env:EXE, "Output\FlowtoysUpdater-win-x64-$env:VERSION.exe")) {
+            & $signtool verify /pa /v $f
+            if ($LASTEXITCODE -ne 0) { throw "signtool verify failed for $f" }
+            # A signature without a timestamp dies with the 3-day certificate.
+            $sig = Get-AuthenticodeSignature $f
+            if ($null -eq $sig.TimeStamperCertificate) { throw "$f is not timestamped" }
+            Write-Host "$f signed by $($sig.SignerCertificate.Subject)"
+          }
+
+      - name: Signing skipped
+        if: env.HAVE_SIGNING != 'true'
+        run: Write-Host "::warning::Artifact Signing secrets not set; the Windows exe and installer are unsigned (SmartScreen will warn)."
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
