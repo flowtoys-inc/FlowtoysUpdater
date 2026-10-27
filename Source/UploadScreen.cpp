@@ -26,11 +26,20 @@ UploadScreen::~UploadScreen()
 void UploadScreen::reset()
 {
 	progression = 0;
-	text = "updating with " + FirmwareManager::getInstance()->selectedFirmware->infos + "\n- do not disconnect until complete -";
+
+	std::shared_ptr<Firmware> fw = FirmwareManager::getInstance()->selectedFirmware;
+	if (fw == nullptr)
+	{
+		text = "No firmware selected.\nPlease go back and select a firmware.";
+		repaint();
+		return;
+	}
+
+	text = "updating with " + fw->infos + "\n- do not disconnect until complete -";
 	PropManager::getInstance()->flash();
 }
 
-void UploadScreen::paint(Graphics & g)
+void UploadScreen::paint(Graphics &g)
 {
 	g.setColour(Colours::lightgrey);
 	Rectangle<int> r = getLocalBounds().withSizeKeepingCentre(300, 40).translated(0, -60);
@@ -42,20 +51,21 @@ void UploadScreen::paint(Graphics & g)
 	Colour c = Colours::limegreen;
 	if (numErrored > 0) c = progression < 1 ? Colours::orange : Colours::orangered;
 	g.setColour(c);
-	r.setWidth((int)(r.getWidth()*progression));
+	r.setWidth((int)(r.getWidth() * progression));
 	g.fillRoundedRectangle(r.toFloat(), 2);
 }
 
-void UploadScreen::newMessage(const PropManager::PropManagerEvent & e)
+void UploadScreen::newMessage(const PropManager::PropManagerEvent &e)
 {
 	if (e.type == PropManager::PropManagerEvent::FLASHING_PROGRESS)
-	{	
+	{
 		numErrored = e.numErrored;
 		numSuccess = e.numFlashed;
 		progression = e.progress;
 
 		repaint();
-	} else if (e.type == PropManager::PropManagerEvent::FLASHING_FINISHED)
+	}
+	else if (e.type == PropManager::PropManagerEvent::FLASHING_FINISHED)
 	{
 		numErrored = e.numErrored;
 		numSuccess = e.numFlashed;
@@ -69,6 +79,5 @@ void UploadScreen::newMessage(const PropManager::PropManagerEvent & e)
 		{
 			screenListeners.call(&ScreenListener::screenFinish, this);
 		}
-		
 	}
 }

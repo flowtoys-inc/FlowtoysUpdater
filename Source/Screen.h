@@ -15,7 +15,14 @@
 class AppScreen : public Component
 {
 public:
-	enum ScreenID { PROP_CHOOSE, FW_CHOOSE, CONNECT, UPLOAD, COMPLETE };
+	enum ScreenID
+	{
+		PROP_CHOOSE,
+		FW_CHOOSE,
+		CONNECT,
+		UPLOAD,
+		COMPLETE
+	};
 
 	AppScreen(const String &screenName, ScreenID id);
 	~AppScreen();
@@ -37,8 +44,8 @@ public:
 	};
 
 	ListenerList<ScreenListener> screenListeners;
-	void addScreenListener(ScreenListener* newListener) { screenListeners.add(newListener); }
-	void removeScreenListener(ScreenListener* listener) { screenListeners.remove(listener); }
+	void addScreenListener(ScreenListener *newListener) { screenListeners.add(newListener); }
+	void removeScreenListener(ScreenListener *listener) { screenListeners.remove(listener); }
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AppScreen)
 };

@@ -1,0 +1,30 @@
+# Matches the code's existing style (tabs, Allman braces) so that adopting
+# clang-format was a whitespace-only change. ColumnLimit 0 keeps hand-wrapped
+# lines as they are instead of reflowing them.
+BasedOnStyle: LLVM
+Language: Cpp
+Standard: c++17
+UseTab: ForContinuationAndIndentation
+TabWidth: 4
+IndentWidth: 4
+ContinuationIndentWidth: 4
+AccessModifierOffset: -4
+ColumnLimit: 0
+BreakBeforeBraces: Allman
+AllowShortFunctionsOnASingleLine: All
+AllowShortIfStatementsOnASingleLine: WithoutElse
+AllowShortBlocksOnASingleLine: Always
+AllowShortCaseLabelsOnASingleLine: true
+AllowShortLambdasOnASingleLine: All
+DerivePointerAlignment: true
+BreakConstructorInitializers: AfterColon
+PackConstructorInitializers: Never
+ConstructorInitializerIndentWidth: 4
+IndentCaseLabels: true
+NamespaceIndentation: None
+MaxEmptyLinesToKeep: 3
+KeepEmptyLines:
+  AtStartOfBlock: true
+SortIncludes: Never
+ReflowComments: false
+SpacesBeforeTrailingComments: 1

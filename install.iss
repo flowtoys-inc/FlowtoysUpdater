@@ -1,44 +1,49 @@
-; -- Example1.iss --
-; Demonstrates copying 3 files and creating an icon.
-
-; SEE THE DOCUMENTATION FOR DETAILS ON CREATING .ISS SCRIPT FILES!
+; Inno Setup script for the Windows installer, built in CI from the CMake
+; Release output (see .github/workflows/release.yml).
+;
+; The app is built with a statically linked CRT, so no DLLs and no VC
+; redistributable are bundled (the old redist step was broken anyway: it
+; copied vc_redist.x64.exe but ran vcredist_x64.exe).
+;
+; AppId must never change: the upgrade flow uninstalls the previous
+; version by looking up this id, including installs made by the 1.x
+; installers already in the field.
 
 #define ApplicationName 'FlowtoysUpdater'
-#define ApplicationVersion GetStringFileInfo('Binaries/CI/App/FlowtoysUpdater.exe',"ProductVersion")
-                             
+#ifndef ApplicationVersion
+  #define ApplicationVersion GetStringFileInfo('build\FlowtoysUpdater_artefacts\Release\FlowtoysUpdater.exe', "ProductVersion")
+#endif
+
 [Setup]
 AppName={#ApplicationName}
 AppId={#ApplicationName}
 AppVersion={#ApplicationVersion}
 AppPublisher=Ben Kuper
 AppPublisherURL=http://www.flowtoys.com
-DefaultDirName={pf}\{#ApplicationName}
+DefaultDirName={autopf}\{#ApplicationName}
 DefaultGroupName={#ApplicationName}
 UninstallDisplayIcon={app}\{#ApplicationName}.exe
 UninstallDisplayName={#ApplicationName}
 Compression=lzma2
 SolidCompression=yes
-ArchitecturesAllowed=x64
-ArchitecturesInstallIn64BitMode=x64
-OutputDir=/
-OutputBaseFilename={#ApplicationName}-win-x64
+ArchitecturesAllowed=x64compatible
+ArchitecturesInstallIn64BitMode=x64compatible
+OutputDir=Output
+; The self-updater downloads artifacts named FlowtoysUpdater-win-x64-<version>.exe
+OutputBaseFilename={#ApplicationName}-win-x64-{#ApplicationVersion}
 SetupIconFile=setup.ico
- 
 
 [Messages]
 SetupWindowTitle={#ApplicationName} {#ApplicationVersion} Setup
 
 [Files]
-Source: "Binaries/CI/App/{#ApplicationName}.exe"; DestDir: "{app}"
-Source: "Binaries/CI/App/*.dll"; DestDir: "{app}"
-Source: "redist\vc_redist.x64.exe"; DestDir: "{tmp}";
+Source: "build\FlowtoysUpdater_artefacts\Release\{#ApplicationName}.exe"; DestDir: "{app}"
 
 [Icons]
 Name: "{group}\{#ApplicationName}"; Filename: "{app}\{#ApplicationName}.exe"
 
 [Run]
 Filename: "{app}\{#ApplicationName}.exe"; Description: "{cm:LaunchProgram,{#ApplicationName}.exe}"; Flags: nowait postinstall skipifsilent
-Filename: "{tmp}\vcredist_x64.exe"; Parameters: "/install /passive /norestart"; Check: not VCinstalled64
 
 [Code]
 function GetUninstallString(): String;
@@ -98,28 +103,3 @@ begin
     end;
   end;
 end;
-
-
-//////////////////////////////////////////////////////////////////////
-function VCinstalled64: Boolean;
-var
-installed: Cardinal;
-key: String;
-begin
-  Result := False;
-  key := 'SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\x64';
-  //if DirExists 
- //('Computer\HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\x64') 
-  //  then begin 
-      if RegQueryDWordValue(HKEY_LOCAL_MACHINE, key, 'Installed', installed) 
-      then begin
-          Log('VC is installed ? ' + IntToStr(installed));  
-          if installed = 1 then begin
-            Result := True;
-          end;
-      end;
-  //end    
-  //else begin
-  //  Log('VC directory not found ');
- // end;
- end;

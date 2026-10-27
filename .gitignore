@@ -76,3 +76,10 @@ Builds/LinuxMakefile/appimagetool-x86_64\.AppImage
 Builds/LinuxMakefile/FlowtoysUpdater\.AppDir/usr/bin/FlowtoysUpdater
 
 *.fwimg
+
+# CMake build output
+/build*/
+
+# Local release/test artifacts
+/FlowtoysUpdater-*.zip
+/FlowtoysUpdater-*.exe

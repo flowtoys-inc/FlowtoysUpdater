@@ -14,24 +14,23 @@
 
 juce_ImplementSingleton(PropManager)
 
-PropManager::PropManager() :
+	PropManager::PropManager() :
 	//shouldCheck(false),
 	selectedType(NOTSET),
 	selectedRevision(-1),
 	isFlashing(false),
-    queuedNotifier(100)
+	queuedNotifier(100)
 {
 	startTimerHz(10);
 }
 
 PropManager::~PropManager()
 {
-
 }
 
 void PropManager::clear()
 {
-    props.clear();
+	props.clear();
 }
 
 void PropManager::checkProps()
@@ -44,32 +43,33 @@ void PropManager::checkProps()
 
 	//for (int i = 0; i < TYPE_MAX; i++)
 	//{
-	hid_device_info * deviceInfos = hid_enumerate(flowtoysVID, (unsigned short)productIds[(int)selectedType]);
-	hid_device_info * dInfo = deviceInfos;
+	hid_device_info *deviceInfos = hid_enumerate(flowtoysVID, (unsigned short)productIds[(int)selectedType]);
+	hid_device_info *dInfo = deviceInfos;
 
 
 	while (dInfo != nullptr)
 	{
-		Prop * p = getItemWithSerial(String(dInfo->serial_number));
-        
-        
+		Prop *p = getItemWithSerial(String(dInfo->serial_number));
+
+
 		if (p != nullptr)
 		{
 			//already opened, do nothing;
-        }else if(!String(dInfo->product_string).toLowerCase().contains("bootloader"))
-        {
+		}
+		else if (!String(dInfo->product_string).toLowerCase().contains("bootloader"))
+		{
 			PropType t = getTypeForProductID(dInfo->product_id);
 			if (t == CLUB) //t
 			{
 				DBG("App mode and device is club, try put to bootloader");
 				resetPropToBootloader(dInfo);
-
-			} else
+			}
+			else
 			{
 				DBG("App mode and device is not club, not connecting");
 			}
-          
-        }else
+		}
+		else
 		{
 			openDevice(dInfo);
 			changed = true;
@@ -107,24 +107,26 @@ void PropManager::checkProps()
 }
 
 
-Prop * PropManager::getItemWithSerial(StringRef serial)
+Prop *PropManager::getItemWithSerial(StringRef serial)
 {
-	for (auto &d : props) if (d->serial == serial) return d;
+	for (auto &d : props)
+		if (d->serial == serial) return d;
 	return nullptr;
 }
 
-Prop * PropManager::getItemWithHidDevice(hid_device * device)
+Prop *PropManager::getItemWithHidDevice(hid_device *device)
 {
 
-	for (auto &d : props) if (d->device == device) return d;
+	for (auto &d : props)
+		if (d->device == device) return d;
 	return nullptr;
 }
 
-Prop * PropManager::openDevice(hid_device_info * deviceInfo)
+Prop *PropManager::openDevice(hid_device_info *deviceInfo)
 {
 	if (deviceInfo->vendor_id == 0 || deviceInfo->product_id == 0 || deviceInfo->serial_number == 0) return nullptr;
 
-	hid_device * d = hid_open(deviceInfo->vendor_id, deviceInfo->product_id, deviceInfo->serial_number);
+	hid_device *d = hid_open(deviceInfo->vendor_id, deviceInfo->product_id, deviceInfo->serial_number);
 	if (d == NULL)
 	{
 		DBG("Device could not be opened " << deviceInfo->serial_number);
@@ -133,7 +135,7 @@ Prop * PropManager::openDevice(hid_device_info * deviceInfo)
 
 	DBG("Device opened : " << deviceInfo->product_string << " (" << deviceInfo->manufacturer_string << ") " << deviceInfo->serial_number << " : " << String::toHexString(deviceInfo->vendor_id) << ", " << String::toHexString(deviceInfo->product_id) << ", " << deviceInfo->product_string);
 
-	Prop * cd = new Prop(String(deviceInfo->product_string), String(deviceInfo->serial_number), d, getTypeForProductID(deviceInfo->product_id), (int)deviceInfo->vendor_id, (int)deviceInfo->product_id, deviceInfo->serial_number);
+	Prop *cd = new Prop(String(deviceInfo->product_string), String(deviceInfo->serial_number), d, getTypeForProductID(deviceInfo->product_id), (int)deviceInfo->vendor_id, (int)deviceInfo->product_id, deviceInfo->serial_number);
 	props.add(cd);
 	cd->addAsyncCapsuleListener(this);
 	return cd;
@@ -142,7 +144,7 @@ Prop * PropManager::openDevice(hid_device_info * deviceInfo)
 
 void PropManager::setSelectedType(PropType t)
 {
-	props.clear(); 
+	props.clear();
 	selectedType = t;
 	//shouldCheck = true;
 }
@@ -163,39 +165,34 @@ void PropManager::timerCallback()
 
 //Constants
 
-PropType PropManager::getTypeForProductID(int productID) {
-	switch (productID)
-	{
-	case 0x1000: return CAPSULE;
-	case 0x1001: return CLUB;
-	}
-
-	return CAPSULE;
+PropType PropManager::getTypeForProductID(int productID)
+{
+	return propTypeForProductID(productID);
 }
 
-void PropManager::newMessage(const Prop::PropEvent & e)
+void PropManager::newMessage(const Prop::PropEvent &e)
 {
 	switch (e.type)
 	{
-	case Prop::PropEvent::FLASHING_PROGRESS:
-		break;
+		case Prop::PropEvent::FLASHING_PROGRESS:
+			break;
 
-	case Prop::PropEvent::FLASH_ERROR:
-		if (!processedFlashes[props.indexOf(e.prop)])
-		{
-			flashSuccess.set(props.indexOf(e.prop), false);
+		case Prop::PropEvent::FLASH_ERROR:
+			if (!processedFlashes[props.indexOf(e.prop)])
+			{
+				flashSuccess.set(props.indexOf(e.prop), false);
+				processedFlashes.set(props.indexOf(e.prop), true);
+			}
+			else
+			{
+				jassertfalse;
+			}
+			break;
+
+		case Prop::PropEvent::FLASH_SUCCESS:
+			flashSuccess.set(props.indexOf(e.prop), true);
 			processedFlashes.set(props.indexOf(e.prop), true);
-		}
-		else
-		{
-			jassertfalse;
-		}
-		break;
-
-	case Prop::PropEvent::FLASH_SUCCESS:
-		flashSuccess.set(props.indexOf(e.prop), true);
-		processedFlashes.set(props.indexOf(e.prop), true);
-		break;
+			break;
 	}
 
 	computeProgression();
@@ -203,6 +200,8 @@ void PropManager::newMessage(const Prop::PropEvent & e)
 
 void PropManager::computeProgression()
 {
+	if (props.isEmpty()) return; //avoid dividing by zero below
+
 	float totalProgression = 0;
 	int numSuccess = 0;
 	int numErrorred = 0;
@@ -211,8 +210,10 @@ void PropManager::computeProgression()
 		if (!props[i]->isFlashing)
 		{
 			totalProgression += 1;
-			if (flashSuccess[i]) numSuccess++;
-			else numErrorred++;
+			if (flashSuccess[i])
+				numSuccess++;
+			else
+				numErrorred++;
 		}
 		else
 		{
@@ -229,12 +230,13 @@ void PropManager::computeProgression()
 	{
 		queuedNotifier.addMessage(new PropManagerEvent(PropManagerEvent::FLASHING_FINISHED, totalProgression, numSuccess, numErrorred));
 		isFlashing = false;
+		flashingFirmware.reset(); //flash done, firmware no longer needs pinning (#9)
 	}
 }
 
-void PropManager::resetPropToBootloader(hid_device_info * deviceInfo)
+void PropManager::resetPropToBootloader(hid_device_info *deviceInfo)
 {
-	hid_device * d = hid_open(deviceInfo->vendor_id, deviceInfo->product_id, deviceInfo->serial_number);
+	hid_device *d = hid_open(deviceInfo->vendor_id, deviceInfo->product_id, deviceInfo->serial_number);
 	if (d != nullptr)
 	{
 		DBG("Reset device to bootloader");
@@ -242,10 +244,13 @@ void PropManager::resetPropToBootloader(hid_device_info * deviceInfo)
 		data.writeByte(0);
 		data.writeInt(Prop::Command::AppReset);
 		data.writeInt(Prop::Subject::Bootloader);
-		while (data.getDataSize() < PACKET_SIZE + 1) data.writeByte(0); //prepend report id
+		while (data.getDataSize() < PACKET_SIZE + 1)
+			data.writeByte(0); //prepend report id
 
 		hid_write(d, (const unsigned char *)data.getData(), data.getDataSize());
-	} else
+		hid_close(d); //this leaked a handle per 100ms poll tick (#10)
+	}
+	else
 	{
 		DBG("Could not open device");
 	}
@@ -253,28 +258,34 @@ void PropManager::resetPropToBootloader(hid_device_info * deviceInfo)
 
 void PropManager::flash()
 {
-	if (props.isEmpty()) {
+	if (props.isEmpty())
+	{
 		DBG("Nothing to flash");
 		return;
 	}
-	
+
+	std::shared_ptr<Firmware> f = FirmwareManager::getInstance()->selectedFirmware;
+	if (f == nullptr)
+	{
+		DBG("No firmware selected, not flashing");
+		return;
+	}
+
+	flashingFirmware = f; //keep alive until FLASHING_FINISHED (#9)
+
 	isFlashing = true;
 
 	flashProgresses.clear();
 	processedFlashes.clear();
 	flashSuccess.clear();
 
-	for (auto& d : props)
+	for (auto &d : props)
 	{
 		flashProgresses.add(0);
 		flashSuccess.add(false);
 		processedFlashes.add(false);
 
-		Firmware* f = FirmwareManager::getInstance()->selectedFirmware;
-
 		DBG("Flashing device " << d->infos);
-		d->flash(&f->data, f->totalBytesToSend);
+		d->flash(&flashingFirmware->data, flashingFirmware->totalBytesToSend);
 	}
-
 }
-

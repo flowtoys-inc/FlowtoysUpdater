@@ -11,9 +11,8 @@
 #pragma once
 #include "Screen.h"
 
-class EndScreen : 
-	public AppScreen,
-	public Button::Listener
+class EndScreen : public AppScreen,
+				  public Button::Listener
 {
 public:
 	EndScreen();
@@ -23,12 +22,10 @@ public:
 	TextButton reconnectBT;
 
 	void paint(Graphics &g) override;
-	void resized();
+	void resized() override;
 
 	// Inherited via Listener
 	virtual void buttonClicked(Button *) override;
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(EndScreen)
-
-		
 };

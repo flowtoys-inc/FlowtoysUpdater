@@ -13,17 +13,16 @@
 #include "Screen.h"
 #include "FirmwareManager.h"
 
-class FirmwareChooserScreen :
-	public AppScreen,
-	public Button::Listener,
-	public ComboBox::Listener,
-	public FirmwareManager::AsyncListener
+class FirmwareChooserScreen : public AppScreen,
+							  public Button::Listener,
+							  public ComboBox::Listener,
+							  public FirmwareManager::AsyncListener
 {
 public:
 	FirmwareChooserScreen();
 	~FirmwareChooserScreen();
 
-	Array<Firmware *> fwList;
+	Array<std::shared_ptr<Firmware>> fwList; //shared: keeps entries alive across list refreshes (#9)
 	ComboBox fwChooser;
 
 	TextButton selectBT;
@@ -38,12 +37,12 @@ public:
 
 	void resized() override;
 
-	void newMessage(const FirmwareManager::FirmwareManagerEvent & e) override;
+	void newMessage(const FirmwareManager::FirmwareManagerEvent &e) override;
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(FirmwareChooserScreen)
 
 	// Inherited via Listener
-	virtual void comboBoxChanged(ComboBox * comboBoxThatHasChanged) override;
+	virtual void comboBoxChanged(ComboBox *comboBoxThatHasChanged) override;
 
 	// Inherited via Listener
 	virtual void buttonClicked(Button *) override;

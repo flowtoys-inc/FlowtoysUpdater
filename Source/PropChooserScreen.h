@@ -12,9 +12,8 @@
 
 #include "Screen.h"
 
-class PropChooserScreen : 
-	public AppScreen,
-	public Button::Listener
+class PropChooserScreen : public AppScreen,
+						  public Button::Listener
 {
 public:
 	PropChooserScreen();

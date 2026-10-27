@@ -15,25 +15,25 @@
 #include "PropConstants.h"
 #include "QueuedNotifier.h"
 
-class Prop :
-	public Thread
+class Prop : public Thread
 {
 public:
-	Prop(StringRef productString, StringRef serial = "", hid_device * device = nullptr, PropType type = PropType::CAPSULE, int vid = 0, int pid = 0, const wchar_t * serialNumber = 0);
+	Prop(StringRef productString, StringRef serial = "", hid_device* device = nullptr, PropType type = PropType::CAPSULE, int vid = 0, int pid = 0, const wchar_t* serialNumber = 0);
 	~Prop();
 
 	//enum FlashState { READY, FLASHING, SUCCESS, ERROR };
 	//EnumParameter* flashState;
 
-    String productString;
-    
+	String productString;
+
 	//DeviceInfo from hidapi
 	int dVid;
 	int dPid;
-	const wchar_t * dSN;
+	const wchar_t* dSN;
 
 	//Commands and status values
-	enum Command {
+	enum Command
+	{
 		GetStatus = 0x00,
 		Reset = 0x02,
 		AppReset = 0xff,
@@ -42,7 +42,8 @@ public:
 		GetVersion = 0x10
 	};
 
-	enum Subject {
+	enum Subject
+	{
 		Bootloader = 1,
 		App = 2
 	};
@@ -60,7 +61,7 @@ public:
 
 	PropType type;
 	String serial;
-	hid_device * device;
+	hid_device* device;
 
 	//Infos
 	uint16_t vid;
@@ -89,9 +90,9 @@ public:
 	MemoryBlock* dataBlock;
 	int totalBytesToSend;
 	int numNoResponses; //check disconnected
-	
+
 	// Threaded call from CapsuleEngine
-	void flash(MemoryBlock * b, int totalBytesToSend);
+	void flash(MemoryBlock* b, int totalBytesToSend);
 
 	void run() override;
 
@@ -101,21 +102,35 @@ public:
 	void sendReset();
 	void sendAppReset(Subject subject);
 	void sendUpdate(int _totalBytesToSend);
-	void sendData(const char * data, int length);
+	void sendData(const char* data, int length);
 	void sendGetStatus();
 	void sendGetVersion(Subject subject);
 
-	void sendPacket(MemoryOutputStream & data, bool prependReportByte = true);
-	MemoryInputStream * readResponse();
+	void sendPacket(MemoryOutputStream& data, bool prependReportByte = true);
+	MemoryInputStream* readResponse();
 
 	class PropEvent
 	{
 	public:
-		enum Type { FLASHING_PROGRESS, FLASH_ERROR, FLASH_SUCCESS };
-		PropEvent(Prop * prop, Type type) : prop(prop), type(type) {}
-		PropEvent(Prop * prop, Type type, float progress) : prop(prop), type(type), progress(progress) {}
+		enum Type
+		{
+			FLASHING_PROGRESS,
+			FLASH_ERROR,
+			FLASH_SUCCESS
+		};
+		PropEvent(Prop* prop, Type type) :
+			prop(prop),
+			type(type)
+		{
+		}
+		PropEvent(Prop* prop, Type type, float progress) :
+			prop(prop),
+			type(type),
+			progress(progress)
+		{
+		}
 
-		Prop * prop;
+		Prop* prop;
 		Type type;
 		float progress;
 	};
