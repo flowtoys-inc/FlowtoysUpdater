@@ -29,6 +29,7 @@ Every part of the pipeline — the CMake project version, the git tag, the CI ar
 6. **Publish to flow-toys.com** (manual until server automation exists):
    - upload the artifacts to `http://flow-toys.com/fusion/app/`,
    - update `http://flow-toys.com/fusion/update.json` (schema below). Existing installs poll this file — nothing reaches users until it changes.
+7. **Update the user-facing download links** if they name a version: the Freshdesk help articles listed in [DISTRIBUTION.md](DISTRIBUTION.md). Edit them in place, because the app links to them by URL.
 
 ## update.json schema (what the client actually reads)
 
@@ -104,7 +105,7 @@ spctl --assess --type install -vv FlowtoysUpdater-osx-x.y.z.pkg  # only if the I
 
 Plus the usual launch checks from the bad-dylib incident (#24): `otool -L` on the binary shows only system libraries, and the quarantined download opens with a double-click.
 
-Windows signing (against SmartScreen warnings) needs an OV/EV code-signing certificate and a `signtool` step in the workflow — tracked in issue #4.
+Windows builds are not code signed, and won't be (decided Oct 2026): users click through SmartScreen's *More info → Run anyway* on first install.
 
 1.2.0 was the last release cut by hand (tag `1.2.0`, without the `v`). release-please counts from its commit (`last-release-sha` in `release-please-config.json`), and `modernize` was merged into `master` with a merge commit so that commit stays in `master`'s history. Remove `last-release-sha` once release-please has made its first release. Repo setting needed once: Settings → Actions → General → **Allow GitHub Actions to create and approve pull requests**.
 

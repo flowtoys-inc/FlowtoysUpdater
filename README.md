@@ -8,10 +8,10 @@ Runs on macOS (Apple Silicon and Intel), Windows (x64), and Linux.
 
 ## Download
 
-- Latest builds: [GitHub Releases](https://github.com/flowtoys-inc/FlowtoysUpdater/releases)
-- Official flowtoys download page: [flowtoys.com](https://www.flowtoys.com)
+- Latest builds: [GitHub Releases](https://github.com/flowtoys-inc/FlowtoysUpdater/releases/latest). Take the `.pkg` for macOS or the `.exe` for Windows.
+- User instructions: [flowtoys product support](https://flowtoys.com/pages/product-support) → flowOS firmware update
 
-> **macOS note**: builds are not yet signed/notarized. On first launch, right-click the app and choose *Open* (or allow it under *System Settings → Privacy & Security*).
+The macOS app is signed and notarized. The Windows installer isn't code signed, so SmartScreen may say *Windows protected your PC*: choose *More info → Run anyway*. Where users find the updater is in [docs/DISTRIBUTION.md](docs/DISTRIBUTION.md).
 
 ## Building from source
 
@@ -33,7 +33,7 @@ The app lands in `build/FlowtoysUpdater_artefacts/Release/`. Full per-platform i
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | How the app is put together: screens, managers, threads |
 | [docs/HID-PROTOCOL.md](docs/HID-PROTOCOL.md) | The USB HID bootloader protocol used to flash props |
 | [docs/FIRMWARE-FORMAT.md](docs/FIRMWARE-FORMAT.md) | The `.fwimg` firmware file format and the server index |
-| [docs/PLAN.md](docs/PLAN.md) | The 2026 modernization plan and roadmap |
+| [docs/DISTRIBUTION.md](docs/DISTRIBUTION.md) | Where users download the app, which help articles to keep in sync |
 
 ## Contributing
 
