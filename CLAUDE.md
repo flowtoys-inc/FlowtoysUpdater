@@ -2,6 +2,8 @@
 
 Desktop firmware updater for flowtoys LED props (JUCE 8, CMake, USB HID). GPLv3.
 
+Read [`brain/README.md`](brain/README.md) first; it routes to the docs and key source files. Docs under `brain/` change in the same PR as the code they describe.
+
 ## Build
 
 ```bash
@@ -16,7 +18,7 @@ If only Command Line Tools are selected on the machine, prefix with
 
 ## Hard constraints (backward compatibility)
 
-- **Never change**: the HID protocol (`docs/HID-PROTOCOL.md`), the `.fwimg` format, USB VID/PIDs, the artifact naming contract `FlowtoysUpdater-{osx|win-x64|linux}-<version>.<ext>`, product name `FlowtoysUpdater`, bundle id `com.benkuper.flowtoysupdater`, or the firmware cache location. Fielded 1.x installs depend on all of these.
+- **Never change**: the HID protocol ([`brain/HID-PROTOCOL.md`](brain/HID-PROTOCOL.md)), the `.fwimg` format, USB VID/PIDs, the artifact naming contract `FlowtoysUpdater-{osx|win-x64|linux}-<version>.<ext>`, product name `FlowtoysUpdater`, bundle id `com.benkuper.flowtoysupdater`, or the firmware cache location. Fielded 1.x installs depend on all of these.
 - The app's endpoints are plain HTTP on flow-toys.com; `NSAllowsArbitraryLoads` must stay until the server-side HTTPS migration (issue #12).
 - The version number lives ONLY in `CMakeLists.txt` `project(VERSION)`, bumped by release-please (never by hand); release tags `vX.Y.Z` must equal it (CI enforces).
 

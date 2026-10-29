@@ -54,4 +54,4 @@ The Windows installer is not, and won't be, code signed (decided Oct 28 2026). S
 
 ## Longer term: web app
 
-On Oct 28 2026 Sean concluded that the updater should become a web app (Asana task "web app vs. desktop app"; prototype in #27). WebHID works in Chrome and Edge on desktop, but not in Safari or Firefox. Once it ships, it becomes the single link in the instructions for both operating systems.
+On Oct 28 2026 the team concluded that the updater should become a web app (prototype in #27). WebHID works in Chrome and Edge on desktop, but not in Safari or Firefox. Once it ships, it becomes the single link in the instructions for both operating systems.

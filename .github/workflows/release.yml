@@ -9,13 +9,13 @@
 #   FlowtoysUpdater-linux-<version>.zip
 #
 # macOS signing + notarization run only when the corresponding secrets
-# exist (see docs/RELEASING.md); without them the release is unsigned,
+# exist (see brain/RELEASING.md); without them the release is unsigned,
 # which works for right-click-open installs but is Gatekeeper-blocked
 # on normal download. Publishing to flow-toys.com (and updating the
 # server's update.json) remains a manual step.
 #
 # Tags pushed by hand don't trigger anything: release-please owns versions
-# and tags (docs/RELEASING.md).
+# and tags (brain/RELEASING.md).
 #
 # Anything not called with a tag is a dry run: it builds, signs and
 # notarizes exactly like a real release, using the CMakeLists.txt
