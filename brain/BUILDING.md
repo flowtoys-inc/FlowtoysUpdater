@@ -46,7 +46,7 @@ sudo apt-get install -y build-essential cmake \
   libfreetype-dev libfontconfig1-dev \
   libx11-dev libxinerama-dev libxrandr-dev libxcursor-dev libxcomposite-dev libxext-dev libxi-dev \
   libcurl4-openssl-dev libasound2-dev \
-  libusb-1.0-0-dev libudev-dev
+  libusb-1.0-0-dev libudev-dev pkg-config
 ```
 
 Then:
@@ -86,7 +86,7 @@ Pass `-DFLOWTOYS_BUILD_TESTS=OFF` at configure time to skip the test target enti
 cmake -B build -DCMAKE_BUILD_TYPE=Release -DFLOWTOYS_WARNINGS_AS_ERRORS=ON
 ```
 
-It is off by default so a newer compiler's new warnings never break a user's build. Deprecations inside JUCE that a new macOS SDK introduces stay warnings even with it on.
+It is off by default so a newer compiler's new warnings never break a user's build. Deprecations inside JUCE that a new macOS SDK introduces, and GCC's `maybe-uninitialized`, stay warnings even with it on.
 
 Code is formatted with clang-format, using the committed `.clang-format` (tabs, Allman braces) at the version CI pins:
 
@@ -99,6 +99,5 @@ CI fails the `clang-format` job if a file would change.
 ## Build options / conventions
 
 - The app version lives in exactly one place: `project(FlowtoysUpdater VERSION x.y.z)` in the root `CMakeLists.txt`. release-please bumps it; release tags (`vx.y.z`) must match it (CI enforces this — see [RELEASING.md](RELEASING.md)).
-- Do **not** compile `Source/hid.c` / `Source/hid_osx.c` if you find them in an old checkout — the hidapi submodule replaces them.
-- CI builds run on every PR (`.github/workflows/build.yml`): clang-format, then macOS universal (`macos-26`), Windows (`windows-2025`), Linux on `ubuntu-26.04` for the newest compiler, and Linux inside an `ubuntu:22.04` container. That last one is the build that ships, because a binary only runs on glibc versions at least as new as the one it was built against.
+- CI builds run on every PR (`.github/workflows/build.yml`): clang-format, then macOS (`macos-26`; arm64 on PRs, universal on `master`), Windows (`windows-2025`), Linux on `ubuntu-26.04` for the newest compiler, and Linux inside an `ubuntu:22.04` container. That last one is the build that ships, because a binary only runs on glibc versions at least as new as the one it was built against. Docs-only changes (`**.md`, `brain/**`, `LICENSE`) skip the build.
 - Every PR also runs `.github/workflows/pr-checks.yml`: the PR title must be a [Conventional Commit](https://www.conventionalcommits.org/), and TruffleHog scans the commits for secrets.
