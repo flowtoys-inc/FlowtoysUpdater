@@ -16,7 +16,7 @@ Users reach the updater through this chain, and every link in it is maintained b
    | Firmware updater – Windows | `6000228631` | attachment `FlowtoysUpdater-win-x64-1.1.9.exe.zip` |
    | Firmware updater troubleshooting | `6000216768` | text only; tells Mac users to right-click → Open |
 
-   The app itself links to `6000213534`, `6000213554`, `6000216768` and two reset articles (`Source/PropConnectScreen.cpp`, `Source/FirmwareChooserScreen.cpp`). Those URLs are compiled into every fielded app, so **edit these articles in place. Never delete them or replace them with new ones.** Freshdesk resolves an article by its numeric ID, so renaming the title doesn't break links.
+   The app itself opens `6000213534`, `6000213554` and the reset articles `6000232163` (Capsule) and `6000202797` (Vision) (`Source/PropConnectScreen.cpp`, `Source/FirmwareChooserScreen.cpp`). `6000216768` is also compiled in but always overwritten before opening, so it is unreachable. Those URLs are compiled into every fielded app, so **edit these articles in place. Never delete them or replace them with new ones.** Freshdesk resolves an article by its numeric ID, so renaming the title doesn't break links.
 3. **flow-toys.com** (GoDaddy cPanel). It serves only the app's machine endpoints: `/fusion/update.json`, `/fusion/app/` (installers for the self-updater) and the firmware files. The site root returns 403 and HTTPS has a self-signed certificate, so it isn't a page users can be sent to.
 4. **GitHub Releases** (`https://github.com/flowtoys-inc/FlowtoysUpdater/releases`). The repo is public. Every release has the signed and notarized Mac `.pkg`/`.zip`, the Windows `.exe` and the Linux `.zip`.
 

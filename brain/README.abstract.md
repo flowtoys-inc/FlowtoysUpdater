@@ -1,1 +1,1 @@
-Public JUCE 8 / CMake desktop app (macOS, Windows, Linux) that flashes flowtoys props (Capsule 2.0, Vision/Club) over a USB HID bootloader protocol (VID 0xF107), using .fwimg firmware mirrored from flow-toys.com, with self-update via update.json.
+Public JUCE 9 / CMake desktop app (macOS, Windows, Linux) that flashes flowtoys props (Capsule 2.0, Vision/Club) over a USB HID bootloader protocol (VID 0xF107), using .fwimg firmware mirrored from flow-toys.com, with self-update via update.json.

@@ -4,7 +4,7 @@ A release is: a version bump, a git tag, CI-built artifacts on GitHub Releases, 
 
 ## The artifact naming contract
 
-The in-app self-updater (`Source/AppUpdater.cpp`) constructs download filenames as:
+The in-app self-updater constructs download filenames (`downloadFileName` in `Source/VersionUtils.h`, called by `Source/AppUpdater.cpp`) as:
 
 ```
 FlowtoysUpdater-<os>-<version>.<extension>
@@ -18,7 +18,7 @@ Every part of the pipeline — the CMake project version, the git tag, the CI ar
 
 1. **Land changes on `master`** with Conventional Commit PR titles (`feat: …`, `fix: …`). PRs are squash-merged, so the title is the commit release-please reads. `feat` bumps the minor version, `fix` the patch, and `!` / `BREAKING CHANGE:` the major.
 2. **release-please** (`.github/workflows/release-please.yml`) keeps a `chore(master): release x.y.z` PR open. It bumps the version in `CMakeLists.txt` (the line marked `# x-release-please-version`) and updates `CHANGELOG.md`. Never edit those, or `.release-please-manifest.json`, by hand. Release PRs get no CI, because release-please opens them with `GITHUB_TOKEN`.
-3. **Dry run** the release from the release PR's branch by pushing it to the `release-dry-run` branch: `git push -f origin <branch-or-sha>:release-dry-run`. (Actions → Release → Run workflow does the same, but GitHub only offers it once `release.yml` is on the default branch, `master`.) It builds, signs and notarizes exactly like a real release (named with the CMake version) but only keeps the files as workflow artifacts — no tag check, no GitHub Release. Download `release-macos` and run the [verification checks](#verifying-a-signed-build) on it. Do this after any change to signing secrets or the workflow.
+3. **Dry run** the release from the release PR's branch by pushing it to the `release-dry-run` branch: `git push -f origin <branch-or-sha>:release-dry-run`. (Actions → Release → Run workflow does the same.) It builds, signs and notarizes exactly like a real release (named with the CMake version) but only keeps the files as workflow artifacts — no tag check, no GitHub Release. Download `release-macos` and run the [verification checks](#verifying-a-signed-build) on it. Do this after any change to signing secrets or the workflow.
 4. **Merge the release PR.** release-please tags `vx.y.z` and creates the GitHub Release with the changelog. It then calls `.github/workflows/release.yml` directly, because a tag pushed with `GITHUB_TOKEN` triggers no workflows. Tags pushed by hand trigger nothing. That workflow:
    - verifies the tag matches the CMake version (hard failure if not),
    - builds macOS (universal arm64+x86_64), Windows (x64, static CRT), Linux,
@@ -38,7 +38,7 @@ Every part of the pipeline — the CMake project version, the git tag, the CI ar
   "version": "1.2.0",            // latest version; compared against the running app
   "testing": false,               // true = release builds ignore this file (staging flag)
   "changelog": ["...", "..."],   // lines for the latest version
-  "archives": [                   // older versions, newest last; shown as history
+  "archives": [                   // older versions, newest last; only those ≥ the running version are shown
     { "version": "1.1.9", "changelog": ["..."] }
   ],
   // Per-OS: if <os>Installer is non-empty, the updater downloads
@@ -65,7 +65,7 @@ Unsigned builds work locally but are Gatekeeper-blocked when downloaded. The rel
 
 What each combination produces:
 
-- **Application cert + notary secrets:** signed (hardened runtime, timestamped) and notarized app, stapled in the zip and inside the pkg.
+- **Application cert + notary secrets:** signed (hardened runtime, timestamped) and notarized app, stapled in the zip. The pkg is built before stapling, so the app inside it is signed but not stapled.
 - **Installer cert too:** the `.pkg` is also signed, notarized and stapled. Without it the job warns and ships an unsigned `.pkg` around the signed app; the zip is unaffected.
 - **No signing secrets:** ad-hoc signed app (right-click → Open on first launch), unsigned pkg, no notarization.
 
