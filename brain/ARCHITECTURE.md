@@ -47,7 +47,7 @@ ThirdParty/hidapi       hidapi (pinned submodule)
 Resources/              icons and prop images (compiled in via juce_add_binary_data)
 .github/workflows/      CI (build.yml) and release (release.yml)
 install.iss             Windows installer (Inno Setup, built in CI)
-docs/                   you are here
+brain/                  you are here
 ```
 
 Historical note: the repo previously used JUCE 5.4.7 via Projucer-generated projects (`Builds/`, `JuceLibraryCode/`, `FlowtoysUpdater.jucer`) with Travis CI, and vendored a 2013 hidapi (`Source/hid.c`, `Source/hid_osx.c`, `External/`). Those were replaced in the 2026 modernization ([PLAN.md](PLAN.md)); leftovers are removed per issue #7.

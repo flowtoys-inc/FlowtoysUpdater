@@ -11,7 +11,7 @@ Runs on macOS (Apple Silicon and Intel), Windows (x64), and Linux.
 - Latest builds: [GitHub Releases](https://github.com/flowtoys-inc/FlowtoysUpdater/releases/latest). Take the `.pkg` for macOS or the `.exe` for Windows.
 - User instructions: [flowtoys product support](https://flowtoys.com/pages/product-support) → flowOS firmware update
 
-The macOS app is signed and notarized. The Windows installer isn't code signed, so SmartScreen may say *Windows protected your PC*: choose *More info → Run anyway*. Where users find the updater is in [docs/DISTRIBUTION.md](docs/DISTRIBUTION.md).
+The macOS app is signed and notarized. The Windows installer isn't code signed, so SmartScreen may say *Windows protected your PC*: choose *More info → Run anyway*. Where users find the updater is in [brain/DISTRIBUTION.md](brain/DISTRIBUTION.md).
 
 ## Building from source
 
@@ -22,18 +22,18 @@ cmake -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build --parallel
 ```
 
-The app lands in `build/FlowtoysUpdater_artefacts/Release/`. Full per-platform instructions (dependencies, universal macOS builds, Linux udev rule, tests) are in [docs/BUILDING.md](docs/BUILDING.md).
+The app lands in `build/FlowtoysUpdater_artefacts/Release/`. Full per-platform instructions (dependencies, universal macOS builds, Linux udev rule, tests) are in [brain/BUILDING.md](brain/BUILDING.md).
 
 ## Documentation
 
 | Document | Contents |
 |---|---|
-| [docs/BUILDING.md](docs/BUILDING.md) | Build prerequisites and commands per platform, running the tests |
-| [docs/RELEASING.md](docs/RELEASING.md) | Release process: versioning, tagging, CI artifacts, signing, server-side steps |
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | How the app is put together: screens, managers, threads |
-| [docs/HID-PROTOCOL.md](docs/HID-PROTOCOL.md) | The USB HID bootloader protocol used to flash props |
-| [docs/FIRMWARE-FORMAT.md](docs/FIRMWARE-FORMAT.md) | The `.fwimg` firmware file format and the server index |
-| [docs/DISTRIBUTION.md](docs/DISTRIBUTION.md) | Where users download the app, which help articles to keep in sync |
+| [brain/BUILDING.md](brain/BUILDING.md) | Build prerequisites and commands per platform, running the tests |
+| [brain/RELEASING.md](brain/RELEASING.md) | Release process: versioning, tagging, CI artifacts, signing, server-side steps |
+| [brain/ARCHITECTURE.md](brain/ARCHITECTURE.md) | How the app is put together: screens, managers, threads |
+| [brain/HID-PROTOCOL.md](brain/HID-PROTOCOL.md) | The USB HID bootloader protocol used to flash props |
+| [brain/FIRMWARE-FORMAT.md](brain/FIRMWARE-FORMAT.md) | The `.fwimg` firmware file format and the server index |
+| [brain/DISTRIBUTION.md](brain/DISTRIBUTION.md) | Where users download the app, which help articles to keep in sync |
 
 ## Contributing
 
