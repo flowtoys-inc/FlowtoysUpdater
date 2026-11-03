@@ -1,6 +1,6 @@
 # FlowtoysUpdater — notes for Claude sessions
 
-Desktop firmware updater for flowtoys LED props (JUCE 8, CMake, USB HID). GPLv3.
+Desktop firmware updater for flowtoys LED props (JUCE 9, CMake, USB HID). GPLv3.
 
 Read [`brain/README.md`](brain/README.md) first; it routes to the docs and key source files. Docs under `brain/` change in the same PR as the code they describe.
 
@@ -31,7 +31,6 @@ If only Command Line Tools are selected on the machine, prefix with
 
 - `master` is the only long-lived branch (the old `modernize` integration branch was merged in for 1.2.0 and retired). All work lands via squash-merged PRs from feature branches into `master`.
 - GitHub Actions are pinned to commit SHAs (version in a trailing comment); dependabot maintains pins + submodules.
-- Do not compile `Source/hid.c` / `Source/hid_osx.c` (legacy vendored hidapi; the submodule replaces them — deletion tracked in #7).
 
 ## Testing limits
 

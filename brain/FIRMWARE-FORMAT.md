@@ -23,7 +23,7 @@ A `.fwimg` is a **ZIP archive** with exactly two entries (parsing: `Source/Firmw
 }
 ```
 
-A file that is not a zip, lacks either entry, or whose `meta` is not a JSON **object** is rejected (and, in the manager's cache path, deleted). Compatibility against the connected prop is an exact `hw_rev` match, except Capsule C↔D which are interchangeable.
+A file that is not a zip, lacks either entry, or whose `meta` is not a JSON **object** is rejected and deleted, including a local file the user picked via "Choose local file" (`FirmwareManager::getFirmwareForFile`). Compatibility against the connected prop is an exact `hw_rev` match, except Capsule C↔D which are interchangeable.
 
 ## Server index
 

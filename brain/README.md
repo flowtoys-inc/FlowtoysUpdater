@@ -1,6 +1,6 @@
 # FlowtoysUpdater documentation
 
-Developer and agent docs for **FlowtoysUpdater**, the desktop app (JUCE 8, CMake, hidapi) that flashes
+Developer and agent docs for **FlowtoysUpdater**, the desktop app (JUCE 9, CMake, hidapi) that flashes
 firmware onto flowtoys LED props (Capsule 2.0, Vision/Club) over USB HID. It downloads `.fwimg` firmware
 from flow-toys.com, puts each prop into its bootloader and flashes all connected props in parallel. It
 also updates itself.
@@ -15,7 +15,7 @@ also updates itself.
 
 | Doc | What it's for |
 |---|---|
-| [`ARCHITECTURE.md`](ARCHITECTURE.md) | The five-screen wizard, the three singletons (`PropManager`, `FirmwareManager`, `AppUpdater`), threads and `QueuedNotifier`, known threading debts, repo layout. |
+| [`ARCHITECTURE.md`](ARCHITECTURE.md) | The five-screen wizard, the three singletons (`PropManager`, `FirmwareManager`, `AppUpdater`), threads and `QueuedNotifier`, repo layout. |
 | [`HID-PROTOCOL.md`](HID-PROTOCOL.md) | USB VID/PIDs, 64-byte HID framing, bootloader commands and responses, hardware revisions, the per-prop flash sequence and failure behavior. **Frozen**: fielded bootloaders depend on it. |
 | [`FIRMWARE-FORMAT.md`](FIRMWARE-FORMAT.md) | The `.fwimg` ZIP (`data` + `meta` JSON), the `firmwares.php` server index, the local cache. |
 | [`BUILDING.md`](BUILDING.md) | Prerequisites and build commands for macOS, Windows and Linux, the udev rule, tests, warnings and formatting. |

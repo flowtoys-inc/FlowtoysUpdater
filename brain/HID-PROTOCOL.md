@@ -34,7 +34,7 @@ All transfers are 64-byte HID output/input reports (`PACKET_SIZE = 64`). On writ
 
 ## Responses (device → host)
 
-Responses are read with a blocking `hid_read` of 64 bytes, strictly lock-step (one response per request, no correlation IDs).
+Responses are read with `hid_read_timeout` (1 s) of 64 bytes, strictly lock-step (one response per request, no correlation IDs).
 
 **`GetStatus` response**: `u8 cmd`, 3 pad bytes, `u32 ackStatus`, `u8 status`, C-string message.
 `ackStatus` doubles as the **byte offset the device has acknowledged** — it drives both erase progress and the write cursor during programming.
@@ -45,11 +45,11 @@ Status values: `NotSet 0`, `Idle 2`, `EraseBusy 3`, `ProgramIdle 4`, `ProgramBus
 
 ## Hardware revisions
 
-`hw_rev` values map to revision letters: `0x300`=C, `0x400`=D, `0x500`=E, `0x600`=F, `0x700`=G, `0x800`=H. Firmware/hardware compatibility is an exact match, with one exception: **Capsule revisions C and D accept each other's firmware**. The connect screen refuses to proceed if connected props report differing hardware revisions.
+`hw_rev` values map to revision letters: `0x300`=C, `0x400`=D, `0x500`=E, `0x600`=F, `0x700`=G, `0x800`=H. Firmware/hardware compatibility is an exact match, with one exception: **Capsule revisions C and D accept each other's firmware**. For Vision/Club, the connect screen refuses to proceed if connected props report differing hardware revisions.
 
 ## Flash sequence (per prop, one thread each)
 
-1. `GetStatus`; if not `Idle`, send `Reset` and poll every 10 ms until `Idle`.
+1. `GetStatus`; if not `Idle`, send `Reset` and poll every 10 ms until `Idle`; aborts with a flash error if the device reports `Error`.
 2. `Update(totalBytesToSend, crc=0, vid, pid, hw_rev)`.
 3. **Erase phase**: poll `GetStatus` — `EraseBusy` → keep waiting; `Error` → abort; `ProgramIdle` → continue. Progress is estimated as `ackStatus / sizeToErase` with hardcoded erase sizes: **51200** bytes (Capsule), **113664** bytes (Vision/Club).
 4. **Program phase**: while status is `ProgramIdle` and `ackStatus < totalBytesToSend`, send a `Data` packet containing the 60 bytes at offset `ackStatus` — i.e. the device's acknowledged offset *is* the write cursor, giving implicit retry/resume within a session. `ProgramDone` → finished.
@@ -59,6 +59,5 @@ The firmware image is padded to a multiple of 60 bytes so every `Data` packet is
 
 ## Failure behavior
 
-- 20 consecutive empty reads → the prop is marked errored and the UI asks the user to unplug/replug and retry.
+- 20 consecutive empty reads (≈20 s of silence at the 1 s timeout) → the prop is marked errored and the UI asks the user to unplug/replug and retry.
 - A prop that disappears mid-flash simply stops responding (enumeration is paused during flashing); it stays in bootloader mode and can be re-flashed — the bootloader itself is not overwritten.
-- Known defect: on macOS the blocking `hid_read` has no timeout, so a silently-dead device can hang its flash thread (issue #10).
