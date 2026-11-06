@@ -19,4 +19,4 @@ jobs:
   pr-checks:
     # Runs on Dependabot PRs too: dependabot.yml prefixes their commits
     # ci(deps)/build(deps), so the titles pass, and they get the secret scan.
-    uses: flowtoys-inc/dev-standards/.github/workflows/pr-checks.yml@36a1fbb92d4868cb87e8db23931e3e6ddd8fae69 # v0.1.0
+    uses: flowtoys-inc/dev-standards/.github/workflows/pr-checks.yml@f632c110c01ca9ca4964d63d0cd74ec1bbd402b9 # v0.1.1

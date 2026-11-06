@@ -21,7 +21,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
-    uses: flowtoys-inc/dev-standards/.github/workflows/release-please.yml@36a1fbb92d4868cb87e8db23931e3e6ddd8fae69 # v0.1.0
+    uses: flowtoys-inc/dev-standards/.github/workflows/release-please.yml@f632c110c01ca9ca4964d63d0cd74ec1bbd402b9 # v0.1.1
 
   # A tag pushed with GITHUB_TOKEN triggers no workflows, so the release
   # build is called directly rather than on the tag.
