@@ -206,7 +206,7 @@ If the auto-update fails, you can always download and replace it manually.";
 	}
 }
 
-void AppUpdater::finished(URL::DownloadTask *, bool success)
+void AppUpdater::finished([[maybe_unused]] URL::DownloadTask *task, bool success)
 {
 	if (!success)
 	{
