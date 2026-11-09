@@ -211,14 +211,27 @@ void FirmwareChooserScreen::buttonClicked(Button* b)
 
 					if (!compatibleHW)
 					{
-						bool hwResult = AlertWindow::showOkCancelBox(AlertWindow::WarningIcon, "Incompatible Hardware revision", "The selected firmware is made for a different revision that the connected props \
-(props are rev " + Firmware::getHwRevNameforHwRev(targetHW) + ", firmware is rev " + Firmware::getHwRevNameforHwRev(fw->hwRev) + "\nAre you SURE you want to use this firmware ?",
-																	 "Yes", "No");
+						String message = "The selected firmware is made for a different revision that the connected props "
+										 "(props are rev " +
+										 Firmware::getHwRevNameforHwRev(targetHW) + ", firmware is rev " + Firmware::getHwRevNameforHwRev(fw->hwRev) +
+										 "\nAre you SURE you want to use this firmware ?";
 
-						if (!hwResult)
-						{
-							FirmwareManager::getInstance()->localFirmware.reset();
-						}
+						auto options = MessageBoxOptions()
+										   .withIconType(MessageBoxIconType::WarningIcon)
+										   .withTitle("Incompatible Hardware revision")
+										   .withMessage(message)
+										   .withButton("Yes", 1)
+										   .withButton(MessageBoxButtonOptions("No", 0).withRole(MessageBoxButtonRole::cancel))
+										   .withAssociatedComponent(this);
+
+						// The box is async: the "No" path finishes in the callback.
+						hwWarningBox = AlertWindow::showScopedAsync(options, [this](int result)
+																	{
+							if (result == 0)
+							{
+								FirmwareManager::getInstance()->localFirmware.reset();
+								updateVisibility();
+							} });
 					}
 				}
 			}

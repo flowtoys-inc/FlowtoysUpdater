@@ -29,6 +29,10 @@ public:
 	TextButton chooseFileBT;
 	Label helpBT;
 
+	// Holds the open hardware-mismatch prompt; destroying it dismisses the box
+	// without running its callback, so the callback never outlives this screen.
+	ScopedMessageBox hwWarningBox;
+
 	void updateVisibility();
 
 	void paint(Graphics &g) override;
