@@ -64,9 +64,18 @@ jobs:
             container: ubuntu:22.04
             package: true
             cmake_flags: ""
+          # Debug compiles code that Release strips (DBG(), jassert()), so
+          # Debug-only breakage shows up here instead of on a dev's machine.
+          # Builds and tests only; never packaged. One leg on the cheapest
+          # runner: DBG()/jassert() breakage isn't platform-specific.
+          - name: Linux (Debug)
+            os: ubuntu-26.04
+            build_type: Debug
+            cmake_flags: ""
     env:
       CMAKE_FLAGS: ${{ matrix.cmake_flags }}
       COMPILER_CACHE: ${{ matrix.compiler_cache || 'ccache' }}
+      BUILD_TYPE: ${{ matrix.build_type || 'Release' }}
     steps:
       # The bare container has no git, without which checkout falls back to
       # a tarball and skips the submodules.
@@ -141,15 +150,17 @@ jobs:
       - name: Configure
         shell: bash
         run: >-
-          eval cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DFLOWTOYS_WARNINGS_AS_ERRORS=ON
+          eval cmake -B build -G Ninja -DCMAKE_BUILD_TYPE="$BUILD_TYPE" -DFLOWTOYS_WARNINGS_AS_ERRORS=ON
           -DCMAKE_C_COMPILER_LAUNCHER="$COMPILER_CACHE" -DCMAKE_CXX_COMPILER_LAUNCHER="$COMPILER_CACHE"
           "$CMAKE_FLAGS"
 
       - name: Build
-        run: cmake --build build --config Release --parallel
+        shell: bash
+        run: cmake --build build --config "$BUILD_TYPE" --parallel
 
       - name: Test
-        run: ctest --test-dir build --build-config Release --output-on-failure
+        shell: bash
+        run: ctest --test-dir build --build-config "$BUILD_TYPE" --output-on-failure
 
       # Package inside the runner so unix executable permissions survive:
       # the artifact store itself strips them, an inner zip preserves them.
@@ -157,7 +168,7 @@ jobs:
       # executable; without a sealed bundle signature, quarantined downloads
       # are killed at launch on newer macOS (#24). Seal it ad-hoc.
       - name: Package (macOS)
-        if: runner.os == 'macOS'
+        if: runner.os == 'macOS' && env.BUILD_TYPE == 'Release'
         run: |
           codesign --force --deep --sign - build/FlowtoysUpdater_artefacts/Release/FlowtoysUpdater.app
           codesign --verify --deep --strict build/FlowtoysUpdater_artefacts/Release/FlowtoysUpdater.app
@@ -170,7 +181,7 @@ jobs:
       # Also builds the Inno Setup installer, so install.iss is validated on
       # every PR instead of only at release time.
       - name: Package (Windows)
-        if: runner.os == 'Windows'
+        if: runner.os == 'Windows' && env.BUILD_TYPE == 'Release'
         shell: pwsh
         run: |
           $v = (Select-String -Path CMakeLists.txt -Pattern 'project\(FlowtoysUpdater VERSION ([0-9.]+)').Matches[0].Groups[1].Value
@@ -178,7 +189,7 @@ jobs:
           Compress-Archive -Path build/FlowtoysUpdater_artefacts/Release/FlowtoysUpdater.exe -DestinationPath FlowtoysUpdater-win-x64.zip
 
       - name: Upload artifact
-        if: runner.os != 'Linux' || matrix.package
+        if: env.BUILD_TYPE == 'Release' && (runner.os != 'Linux' || matrix.package)
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: FlowtoysUpdater-${{ runner.os }}
