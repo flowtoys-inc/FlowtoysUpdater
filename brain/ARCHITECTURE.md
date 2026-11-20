@@ -22,7 +22,7 @@ Each screen's real work is triggered from its `reset()` (called on entry). In De
 - **`FirmwareManager`** — firmware acquisition and parsing. A background thread fetches the index at `http://flow-toys.com/fusion/firmwares.php` and mirrors all `.fwimg` files into `userApplicationDataDirectory/FlowtoysFirmwares`, re-checking hourly. Parsing lives in `Source/FirmwareImage.h`. See [FIRMWARE-FORMAT.md](FIRMWARE-FORMAT.md).
 - **`AppUpdater`** — self-update. Checks `http://flow-toys.com/fusion/update.json` at startup; on a newer version, offers to download and replace/reinstall the app. See [RELEASING.md](RELEASING.md) for the contract.
 
-Pure logic shared by these (version comparison, download filenames, `.fwimg` parsing, hardware-revision rules) is extracted into `Source/VersionUtils.h` and `Source/FirmwareImage.h`, which depend only on `juce_core` and are covered by the unit tests in `Tests/`.
+Pure logic shared by these (version comparison, download filenames, `.fwimg` parsing, hardware-revision rules, the post-flash read-back verdict) is extracted into `Source/VersionUtils.h`, `Source/FirmwareImage.h` and `Source/FlashOutcome.h`, which depend only on `juce_core` and are covered by the unit tests in `Tests/`.
 
 ## Threads and events
 

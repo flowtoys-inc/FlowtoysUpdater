@@ -89,7 +89,7 @@ std::shared_ptr<Firmware> FirmwareManager::getFirmwareForFile(File f)
 		return nullptr;
 	}
 
-	std::shared_ptr<Firmware> fw = std::make_shared<Firmware>(img->data, img->totalBytesToSend, img->meta, f.getFileNameWithoutExtension(), img->versionString, img->version, img->hwRev, img->pid, img->vid);
+	std::shared_ptr<Firmware> fw = std::make_shared<Firmware>(img->data, img->totalBytesToSend, img->meta, f.getFileNameWithoutExtension(), img->versionString, img->version, img->hwRev, img->pid, img->vid, img->fwRev);
 
 	for (int i = 0; i < TYPE_MAX; i++)
 	{

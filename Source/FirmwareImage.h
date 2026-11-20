@@ -23,6 +23,7 @@ struct FirmwareImage
 	juce::MemoryBlock data;
 	int totalBytesToSend = 0; // data size rounded up to a whole number of packets
 	juce::var meta;
+	int fwRev = 0;              // raw fw_rev (maj<<8|min), 0 if the meta has none
 	juce::String versionString; // "maj.min" decoded from fw_rev
 	float version = 0;          // legacy float form; do not use for ordering
 	int hwRev = 0;
@@ -91,6 +92,7 @@ struct FirmwareImage
 		result->vid = (int)fwMeta.getProperty("usb_vid", 0);
 		result->pid = (int)fwMeta.getProperty("usb_pid", 0);
 		juce::uint16 fwRev = (juce::uint16)(int)fwMeta.getProperty("fw_rev", 0);
+		result->fwRev = fwRev;
 		result->hwRev = (int)fwMeta.getProperty("hw_rev", 0);
 		result->versionString = juce::String(fwRev >> 8) + "." + juce::String(fwRev & 0xff);
 		result->version = result->versionString.getFloatValue();

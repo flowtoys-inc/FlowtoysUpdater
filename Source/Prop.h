@@ -14,6 +14,7 @@
 #include "hidapi.h"
 #include "PropConstants.h"
 #include "QueuedNotifier.h"
+#include "FlashOutcome.h"
 
 class Prop : public Thread
 {
@@ -89,10 +90,16 @@ public:
 	//flashing
 	MemoryBlock* dataBlock;
 	int totalBytesToSend;
-	int numNoResponses; //check disconnected
+	int expectedFwRev = 0; //fw_rev from the image's meta, 0 if unknown
+	int numNoResponses;    //check disconnected
+
+	//Result of the post-flash GetVersion(App) read-back. Written by the flash
+	//thread before it posts FLASH_SUCCESS / FLASH_ERROR, read on the message
+	//thread after that event arrives.
+	FlashOutcome::Outcome flashOutcome = FlashOutcome::Outcome::WrittenUnverified;
 
 	// Threaded call from CapsuleEngine
-	void flash(MemoryBlock* b, int totalBytesToSend);
+	void flash(MemoryBlock* b, int totalBytesToSend, int expectedFwRev);
 
 	void run() override;
 
@@ -104,7 +111,8 @@ public:
 	void sendUpdate(int _totalBytesToSend);
 	void sendData(const char* data, int length);
 	void sendGetStatus();
-	void sendGetVersion(Subject subject);
+	bool sendGetVersion(Subject subject); //false if the device did not answer
+	void discardPendingInput();
 
 	void sendPacket(MemoryOutputStream& data, bool prependReportByte = true);
 	MemoryInputStream* readResponse();
