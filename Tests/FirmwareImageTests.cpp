@@ -38,6 +38,7 @@ TEST_CASE("valid .fwimg parses")
 	CHECK(img->pid == 4096);             // 0x1000
 	CHECK(img->hwRev == 1280);           // 0x500 == rev E
 	CHECK(img->versionString == "2.10"); // fw_rev 522 == (2<<8)|10
+	CHECK(img->fwRev == 522);
 	CHECK(img->data.getSize() == strlen("some firmware bytes"));
 	CHECK(img->totalBytesToSend == packetLength); // rounded up to one packet
 }

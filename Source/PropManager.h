@@ -31,6 +31,11 @@ public:
 	Array<bool> flashSuccess;
 	Array<bool> processedFlashes;
 
+	//Outcome counts of the last finished flash, for the end screen
+	int lastNumVerified = 0;
+	int lastNumUnverified = 0;
+	bool lastFlashedCapsule = false;
+
 	//Settings from user choices
 	//bool shouldCheck;
 	PropType selectedType;

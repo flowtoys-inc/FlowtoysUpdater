@@ -11,7 +11,8 @@ juce_add_console_app(FlowtoysUpdaterTests PRODUCT_NAME "FlowtoysUpdaterTests")
 target_sources(FlowtoysUpdaterTests PRIVATE
     VersionUtilsTests.cpp
     FirmwareImageTests.cpp
-    PropConstantsTests.cpp)
+    PropConstantsTests.cpp
+    FlashOutcomeTests.cpp)
 
 target_include_directories(FlowtoysUpdaterTests PRIVATE ${CMAKE_SOURCE_DIR}/Source)
 

@@ -228,6 +228,19 @@ void PropManager::computeProgression()
 
 	if (totalProgression == 1)
 	{
+		lastNumVerified = 0;
+		lastNumUnverified = 0;
+		lastFlashedCapsule = false;
+		for (int i = 0; i < props.size(); i++)
+		{
+			if (!flashSuccess[i]) continue;
+			if (props[i]->flashOutcome == FlashOutcome::Outcome::Verified)
+				lastNumVerified++;
+			else
+				lastNumUnverified++;
+			if (props[i]->type == CAPSULE) lastFlashedCapsule = true;
+		}
+
 		queuedNotifier.addMessage(new PropManagerEvent(PropManagerEvent::FLASHING_FINISHED, totalProgression, numSuccess, numErrorred));
 		isFlashing = false;
 		flashingFirmware.reset(); //flash done, firmware no longer needs pinning (#9)
@@ -286,6 +299,6 @@ void PropManager::flash()
 		processedFlashes.add(false);
 
 		DBG("Flashing device " << d->infos);
-		d->flash(&flashingFirmware->data, flashingFirmware->totalBytesToSend);
+		d->flash(&flashingFirmware->data, flashingFirmware->totalBytesToSend, flashingFirmware->fwRev);
 	}
 }

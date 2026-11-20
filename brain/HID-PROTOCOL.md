@@ -14,6 +14,10 @@ Every prop exposes two USB personalities: **app mode** (normal operation) and **
 
 - A **Vision/Club** found in app mode is sent `AppReset(Bootloader)` to reboot it into the bootloader automatically.
 - A **Capsule** must be put into bootloader mode by hand (button sequence; the app links to instructions).
+  A Capsule plugged in while switched off only stays in its bootloader for about 2 s unless a HID command
+  arrives (entering it through the button sequence has no such timeout). The app sends `GetVersion(Bootloader)`
+  and `GetVersion(App)` from the `Prop` constructor, right after `hid_open`, on the first 10 Hz poll that
+  sees the device, which keeps it there.
 
 Discovery is a 10 Hz `hid_enumerate` poll; devices are tracked by USB serial number.
 
@@ -53,9 +57,22 @@ Status values: `NotSet 0`, `Idle 2`, `EraseBusy 3`, `ProgramIdle 4`, `ProgramBus
 2. `Update(totalBytesToSend, crc=0, vid, pid, hw_rev)`.
 3. **Erase phase**: poll `GetStatus` — `EraseBusy` → keep waiting; `Error` → abort; `ProgramIdle` → continue. Progress is estimated as `ackStatus / sizeToErase` with hardcoded erase sizes: **51200** bytes (Capsule), **113664** bytes (Vision/Club).
 4. **Program phase**: while status is `ProgramIdle` and `ackStatus < totalBytesToSend`, send a `Data` packet containing the 60 bytes at offset `ackStatus` — i.e. the device's acknowledged offset *is* the write cursor, giving implicit retry/resume within a session. `ProgramDone` → finished.
-5. `AppReset(App)` to boot the new firmware.
+5. **Read-back**: drop any stale queued input reports, then send `GetVersion(App)`. In the bootloader this reads the version block from the app area of flash, so it reports the image just written. It is classified by `FlashOutcome::classifyReadBack` (`Source/FlashOutcome.h`):
+   - `fw_rev` equals the image's meta `fw_rev` → **verified**.
+   - a different `fw_rev` → **failed**: `FLASH_ERROR`, and no `AppReset`, so the prop stays in its bootloader to be flashed again.
+   - no answer, or an image whose meta has no `fw_rev` → **written, unverified**. Counted as a success (never a failure or a re-flash prompt); the end screen says "firmware written" and asks the user to replug the prop.
+6. `AppReset(App)` to boot the new firmware (verified and unverified outcomes only).
 
-The firmware image is padded to a multiple of 60 bytes so every `Data` packet is full. There is currently no CRC and no post-flash verification (the `crc` field exists in the protocol but the app sends 0) — see issue #12.
+The firmware image is padded to a multiple of 60 bytes so every `Data` packet is full. There is no CRC (the `crc` field exists in the protocol but the app sends 0, see issue #12); the version read-back above is the only post-flash check, and it confirms the version block, not every byte.
+
+### After `AppReset(App)`
+
+The app does not wait for a prop to come back after the reset; success is decided by the read-back above.
+
+- **Vision/Club** re-enumerates in app mode a fraction of a second later.
+- **Capsule 2.0** never comes back on USB: its app firmware does not enable USB, and the bootloader's reset boots straight into the app. That is expected, not a failure. Because the read-back is the only confirmation a Capsule ever gives, the end screen tells the user to unplug and replug a Capsule to finish.
+
+These Capsule behaviors come from reading the firmware sources and from a field report of Capsules not reappearing after a successful flash; the read-back on a Capsule bootloader 1.0 still needs a bench check.
 
 ## Failure behavior
 

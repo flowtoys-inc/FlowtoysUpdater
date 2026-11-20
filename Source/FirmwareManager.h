@@ -18,7 +18,7 @@
 class Firmware
 {
 public:
-	Firmware(MemoryBlock data, int totalBytesToSend, var meta, String infos, String versionString, float version, int hwRev, int pid, int vid) :
+	Firmware(MemoryBlock data, int totalBytesToSend, var meta, String infos, String versionString, float version, int hwRev, int pid, int vid, int fwRev) :
 		data(data),
 		totalBytesToSend(totalBytesToSend),
 		infos(infos),
@@ -27,7 +27,8 @@ public:
 		hwRev(hwRev),
 		version(version),
 		pid(pid),
-		vid(vid)
+		vid(vid),
+		fwRev(fwRev)
 	{
 	}
 
@@ -42,6 +43,7 @@ public:
 	float version;
 	int pid;
 	int vid;
+	int fwRev; //raw fw_rev from meta, used to check the post-flash read-back
 	PropType type = NOTSET;
 
 	static String getHwRevNameforHwRev(int hwRev)

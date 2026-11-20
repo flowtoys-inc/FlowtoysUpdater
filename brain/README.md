@@ -30,7 +30,7 @@ also updates itself.
 |---|---|---|
 | Understand the app flow / add or change a screen | [ARCHITECTURE](ARCHITECTURE.md) | `Source/ScreenManager.cpp`, `Source/Screen.h`, `Source/*Screen.cpp`, `Source/MainComponent.cpp` |
 | Change device discovery or the auto-reset into bootloader | [HID-PROTOCOL](HID-PROTOCOL.md#device-identification) | `Source/PropManager.cpp`, `Source/PropConstants.h:28` (`productIds`, `flowtoysVID`) |
-| Touch the flash state machine | [HID-PROTOCOL](HID-PROTOCOL.md#flash-sequence-per-prop-one-thread-each) | `Source/Prop.cpp` (erase sizes at `:312`), `Source/Prop.h` |
+| Touch the flash state machine | [HID-PROTOCOL](HID-PROTOCOL.md#flash-sequence-per-prop-one-thread-each) | `Source/Prop.cpp` (erase sizes at `:326`), `Source/Prop.h`, `Source/FlashOutcome.h` (post-flash read-back verdict and end-screen text), `Tests/FlashOutcomeTests.cpp` |
 | Change hardware-revision compatibility rules | [HID-PROTOCOL](HID-PROTOCOL.md#hardware-revisions), [FIRMWARE-FORMAT](FIRMWARE-FORMAT.md) | `Source/FirmwareImage.h`, `Source/VersionUtils.h`, `Tests/FirmwareImageTests.cpp` |
 | Parse `.fwimg` / change firmware download or cache | [FIRMWARE-FORMAT](FIRMWARE-FORMAT.md) | `Source/FirmwareImage.h`, `Source/FirmwareManager.cpp`, `Source/FirmwareManager.h:82` (`remoteHost`) |
 | Change the self-updater | [RELEASING](RELEASING.md#updatejson-schema-what-the-client-actually-reads) | `Source/AppUpdater.cpp`, `Source/Main.cpp:41` (`update.json` URL) |
@@ -49,6 +49,6 @@ three singletons. `PropManager` polls `hid_enumerate(0xF107, …)` at 10 Hz on t
 each bootloader-mode prop in a `Prop` thread that runs the lock-step HID flash protocol. `FirmwareManager`
 mirrors the server's `.fwimg` catalog into a local cache, and `AppUpdater` checks `update.json` at startup.
 Pure logic (version compare, `.fwimg` parsing, hardware-revision rules) lives in header-only
-`VersionUtils.h` / `FirmwareImage.h` with Catch2 tests. The HID path cannot be tested without physical
+`VersionUtils.h` / `FirmwareImage.h` / `FlashOutcome.h` with Catch2 tests. The HID path cannot be tested without physical
 props, so any change there ends with a hardware hand-off: flash a real Capsule and a Vision, and confirm
 they boot the new firmware.

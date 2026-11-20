@@ -10,6 +10,7 @@
 
 #include "EndScreen.h"
 #include "ScreenManager.h"
+#include "PropManager.h"
 
 EndScreen::EndScreen() :
 	AppScreen("Complete", COMPLETE),
@@ -30,7 +31,9 @@ EndScreen::~EndScreen()
 void EndScreen::paint(Graphics &g)
 {
 	g.setColour(Colours::lightgrey);
-	g.drawFittedText("update successful.\nready to flow ...", getLocalBounds(), Justification::centred, 3);
+	PropManager *pm = PropManager::getInstance();
+	String text = FlashOutcome::endScreenText(pm->lastNumVerified, pm->lastNumUnverified, pm->lastFlashedCapsule);
+	g.drawFittedText(text, getLocalBounds().reduced(20, 0), Justification::centred, 4);
 }
 
 void EndScreen::resized()

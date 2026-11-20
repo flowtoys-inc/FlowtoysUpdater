@@ -127,7 +127,7 @@ void Prop::sendGetStatus()
 	}
 }
 
-void Prop::sendGetVersion(Subject subject)
+bool Prop::sendGetVersion(Subject subject)
 {
 	MemoryOutputStream s;
 	s.writeInt(Command::GetVersion);
@@ -194,11 +194,23 @@ void Prop::sendGetVersion(Subject subject)
 		if (subject == App) fwIdentString = fwString;
 
 		DBG((subject == App ? "App" : "Bootloader") << " version response : cmd = " << (int)cmd << ", appActive = " << (int)appActive << ", bootloader active = " << (int)bootloaderActive << ", vid = " << String::toHexString(vid) << ", pid = " << String::toHexString(pid) << ", hw_rev = " << (int)hw_rev << ", fw_rev = " << fwVersion << ", date = " << fw_date << ", git rev = " << gitRevString << ", fwIdent = " << fwString);
+		return true;
 	}
-	else
-	{
-		DBG("Result is null !");
-	}
+
+	DBG("Result is null !");
+	return false;
+}
+
+void Prop::discardPendingInput()
+{
+	if (device == nullptr) return;
+
+	//The protocol is strictly lock-step with no correlation ids, so a reply
+	//that arrived after its 1s read timeout would be taken as the answer to
+	//the next request. Drop anything already queued (non-blocking reads).
+	unsigned char stale[PACKET_SIZE];
+	for (int i = 0; i < 16 && hid_read_timeout(device, stale, PACKET_SIZE, 0) > 0; i++)
+		DBG("Discarded a stale report");
 }
 
 
@@ -254,12 +266,14 @@ MemoryInputStream *Prop::readResponse()
 	}
 }
 
-void Prop::flash(MemoryBlock *_dataBlock, int _totalBytesToSend)
+void Prop::flash(MemoryBlock *_dataBlock, int _totalBytesToSend, int _expectedFwRev)
 {
 	stopThread(3000);
 
 	this->dataBlock = _dataBlock;
 	this->totalBytesToSend = _totalBytesToSend;
+	this->expectedFwRev = _expectedFwRev;
+	this->flashOutcome = FlashOutcome::Outcome::WrittenUnverified;
 
 	startThread();
 }
@@ -393,10 +407,39 @@ void Prop::run()
 		}
 	}
 
+	if (threadShouldExit())
+	{
+		isFlashing = false;
+		return;
+	}
+
+	DBG("Flashing done, reading back the app version...");
+
+	//Confirm the write before booting it. In the bootloader, GetVersion(App)
+	//reads the version block from the app area of flash, so it reflects the
+	//image just written. This matters most for Capsule 2.0: its app has no
+	//USB, so after AppReset(App) it never reappears and this is the only
+	//chance to check the result. isFlashing stays true until the outcome is
+	//known, so computeProgression() can't count this prop as finished early.
+	discardPendingInput();
+	bool answered = sendGetVersion(Subject::App);
+	flashOutcome = FlashOutcome::classifyReadBack(answered, fw_rev, expectedFwRev);
+
+	DBG("Read-back: " << (answered ? fwVersion : String("no answer")) << ", expected fw_rev " << expectedFwRev << " -> " << FlashOutcome::toString(flashOutcome));
+
+	if (FlashOutcome::isFailure(flashOutcome))
+	{
+		//The bootloader holds a different app than the one sent. Stay in the
+		//bootloader (no AppReset) so the prop can be flashed again.
+		progression = 0;
+		isFlashing = false;
+		queuedNotifier.addMessage(new PropEvent(this, PropEvent::FLASH_ERROR, progression));
+		return;
+	}
+
 	progression = 1;
 	isFlashing = false;
 
-	DBG("Flashing done !");
 	queuedNotifier.addMessage(new PropEvent(this, PropEvent::FLASH_SUCCESS, progression));
 	sendAppReset(Subject::App);
 }
