@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.2](https://github.com/flowtoys-inc/FlowtoysUpdater/compare/v1.2.1...v1.2.2) (2026-11-20)
+
+
+### Bug Fixes
+
+* confirm Capsule flashes by reading back the app version ([#56](https://github.com/flowtoys-inc/FlowtoysUpdater/issues/56)) ([00c8ebf](https://github.com/flowtoys-inc/FlowtoysUpdater/commit/00c8ebf55f607dbfad2848ffbcc713bfda02e034))
+
 ## [1.2.1](https://github.com/flowtoys-inc/FlowtoysUpdater/compare/1.2.0...v1.2.1) (2026-11-17)
 
 
