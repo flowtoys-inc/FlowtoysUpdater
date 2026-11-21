@@ -2,7 +2,7 @@
 
 Developer and agent docs for **FlowtoysUpdater**, the desktop app (JUCE 9, CMake, hidapi) that flashes
 firmware onto flowtoys LED props (Capsule 2.0, Vision/Club) over USB HID. It downloads `.fwimg` firmware
-from flow-toys.com, puts each prop into its bootloader and flashes all connected props in parallel. It
+over HTTPS from updater.flowtoys.com, puts each prop into its bootloader and flashes all connected props in parallel. It
 also updates itself.
 
 > **This `brain/` tree is the map of the codebase.** When code and docs disagree, trust the code and fix

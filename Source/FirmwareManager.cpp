@@ -151,7 +151,7 @@ void FirmwareManager::run()
 	StringPairArray responseHeaders;
 	int statusCode = 0;
 
-	URL updateURL(remoteHost + "firmwares.php");
+	URL updateURL(FirmwareCatalog::indexUrl);
 	std::unique_ptr<InputStream> stream(updateURL.createInputStream(URL::InputStreamOptions(URL::ParameterHandling::inAddress)
 																		.withConnectionTimeoutMs(2000)
 																		.withResponseHeaders(&responseHeaders)
@@ -159,96 +159,73 @@ void FirmwareManager::run()
 	//Enforced on every platform (was Windows-only, #22): a captive portal or
 	//error page must not reach the JSON parser. A dead connection arrives
 	//here as statusCode 0 and takes the same errored + local-cache path.
-	if (statusCode != 200)
+	if (statusCode != 200 || stream == nullptr)
 	{
 		DBG("Failed to connect, status code = " << String(statusCode));
+		errored = true;
+		queuedNotifier.addMessage(new FirmwareManagerEvent(FirmwareManagerEvent::FIRMWARE_LOAD_ERROR));
+		loadFirmwares();
+		return;
+	}
+
+	auto catalog = FirmwareCatalog::parseIndex(stream->readEntireStreamAsString());
+	if (!catalog.ok)
+	{
+		DBG("Error reading online firmware list (" << catalog.error << "), loading local firmwares");
 		errored = true;
 		loadFirmwares();
 		return;
 	}
 
-	DBG("Firmware updater:: Status code " << statusCode);
+	onlineFirmwares = catalog.entries.size();
+	DBG("Got " << onlineFirmwares << " online firmwares");
+	downloadedFirmwares = 0;
+	firmwareProgress.clear();
+	firmwareProgress.resize(onlineFirmwares);
+	if (onlineFirmwares == 0) loadFirmwares();
 
-	if (stream != nullptr)
+	for (const auto &entry : catalog.entries)
 	{
-		String content = stream->readEntireStreamAsString();
-		var data = JSON::parse(content);
+		File f = firmwareFolder.getChildFile(entry.file);
 
-		if (data.isObject())
+		//Names are immutable in the catalog, so a cached file with the
+		//catalog's size and sha256 is current. Anything else is replaced.
+		if (f.existsAsFile() && !fileMatchesEntry(f, entry))
 		{
-			bool shouldClear = data.getProperty("clear", false);
-			if (shouldClear) clearFirmwares();
+			DBG("Cached file doesn't match the catalog, re-downloading : " + f.getFileName());
+			f.deleteFile();
+		}
 
-			var fileData = data.getProperty("files", var());
-			if (fileData.isArray())
-			{
-				onlineFirmwares = fileData.size();
-				DBG("Got " << onlineFirmwares << " online firmwares");
-				downloadedFirmwares = 0;
-				firmwareProgress.clear();
-				firmwareProgress.resize(onlineFirmwares);
-				for (int i = 0; i < onlineFirmwares; i++)
-				{
-					File f = firmwareFolder.getChildFile(fileData[i].toString());
+		if (f.existsAsFile())
+		{
+			firmwareProgress.set(downloadedFirmwares, 1);
+			downloadedFirmwares++;
+			if (downloadedFirmwares == onlineFirmwares) loadFirmwares();
+			continue;
+		}
 
-					bool fileExistAndIsValid = false;
-					if (f.existsAsFile() && f.getSize() > 0)
-					{
-						std::shared_ptr<Firmware> fw = getFirmwareForFile(f);
-						if (fw != nullptr)
-						{
-							DBG("File already downloaded and valid : " + f.getFileName());
-							fileExistAndIsValid = true;
-						}
-						else
-						{
-							DBG("File already there but not valid : " + f.getFileName());
-							f.deleteFile();
-						}
-					}
-
-					if (fileExistAndIsValid)
-					{
-						firmwareProgress.set(downloadedFirmwares, 1);
-						downloadedFirmwares++;
-						if (downloadedFirmwares == onlineFirmwares) loadFirmwares();
-					}
-					else
-					{
-						String fURL = remoteHost + String("firmwares/") + URL::addEscapeChars(fileData[i].toString(), false); //add handling for spaces
-
-						DBG("Downloading " << fURL);
-						URL downloadURL(fURL);
-						std::unique_ptr<URL::DownloadTask> t = downloadURL.downloadToFile(f, URL::DownloadTaskOptions().withListener(this));
-						if (t == nullptr)
-						{
-							DBG("Download errored");
-							firmwareProgress.set(downloadedFirmwares, 1);
-							downloadedFirmwares++;
-						}
-						else
-						{
-							firmwareProgress.set(downloadedFirmwares, 0);
-							tasks.add(t.release());
-						}
-					}
-				}
-			}
+		const String fURL = FirmwareCatalog::fileUrl(entry.file);
+		DBG("Downloading " << fURL);
+		std::unique_ptr<URL::DownloadTask> t = URL(fURL).downloadToFile(f, URL::DownloadTaskOptions().withListener(this));
+		if (t == nullptr)
+		{
+			DBG("Download errored");
+			firmwareProgress.set(downloadedFirmwares, 1);
+			downloadedFirmwares++;
 		}
 		else
 		{
-			DBG("Error reading online firmware list, loading local firmwares");
-			errored = true;
-			loadFirmwares();
+			firmwareProgress.set(downloadedFirmwares, 0);
+			taskEntries.add(entry);
+			tasks.add(t.release());
 		}
 	}
-	else
-	{
-		DBG("Couldn't access internet, loading local firmwares");
-		errored = true;
-		queuedNotifier.addMessage(new FirmwareManagerEvent(FirmwareManagerEvent::FIRMWARE_LOAD_ERROR));
-		loadFirmwares();
-	}
+}
+
+bool FirmwareManager::fileMatchesEntry(const File &f, const FirmwareCatalog::Entry &e)
+{
+	if (f.getSize() != e.size) return false; //cheap check first
+	return FirmwareCatalog::matches(e, f.getSize(), SHA256(f).toHexString());
 }
 
 void FirmwareManager::progress(URL::DownloadTask *t, int64 downloaded, int64 total)
@@ -263,6 +240,19 @@ void FirmwareManager::progress(URL::DownloadTask *t, int64 downloaded, int64 tot
 void FirmwareManager::finished(URL::DownloadTask *t, bool success)
 {
 	downloadedFirmwares++;
+
+	//A download that doesn't match the catalog is never parsed or offered.
+	const int taskIndex = tasks.indexOf(t);
+	if (success && isPositiveAndBelow(taskIndex, taskEntries.size()))
+	{
+		const File f = t->getTargetLocation();
+		if (!fileMatchesEntry(f, taskEntries[taskIndex]))
+		{
+			DBG("Downloaded file doesn't match the catalog : " + f.getFileName());
+			f.deleteFile();
+			success = false;
+		}
+	}
 
 	if (success)
 	{

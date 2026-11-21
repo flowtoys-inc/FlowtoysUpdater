@@ -44,8 +44,8 @@ juce_add_gui_app(FlowtoysUpdater
     BUNDLE_ID com.benkuper.flowtoysupdater
     ICON_BIG "${CMAKE_CURRENT_SOURCE_DIR}/Resources/icon.png"
     ICON_SMALL "${CMAKE_CURRENT_SOURCE_DIR}/Resources/icon.png"
-    # update.json / firmwares.php / downloads are plain HTTP; ATS must allow
-    # them until the server side moves to HTTPS (issue #12).
+    # update.json and the self-update downloads are plain HTTP; ATS must
+    # allow them until they move to HTTPS (issue #12). Firmware is HTTPS.
     PLIST_TO_MERGE [[
         <plist version="1.0">
         <dict>
@@ -94,6 +94,7 @@ target_compile_definitions(FlowtoysUpdater PRIVATE
 target_link_libraries(FlowtoysUpdater PRIVATE
     FlowtoysUpdaterData
     juce::juce_core
+    juce::juce_cryptography
     juce::juce_data_structures
     juce::juce_events
     juce::juce_graphics
