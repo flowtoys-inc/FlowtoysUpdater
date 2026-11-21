@@ -19,7 +19,7 @@ If only Command Line Tools are selected on the machine, prefix with
 ## Hard constraints (backward compatibility)
 
 - **Never change**: the HID protocol ([`brain/HID-PROTOCOL.md`](brain/HID-PROTOCOL.md)), the `.fwimg` format, USB VID/PIDs, the artifact naming contract `FlowtoysUpdater-{osx|win-x64|linux}-<version>.<ext>`, product name `FlowtoysUpdater`, bundle id `com.benkuper.flowtoysupdater`, or the firmware cache location. Fielded 1.x installs depend on all of these.
-- The app's endpoints are plain HTTP on flow-toys.com; `NSAllowsArbitraryLoads` must stay until the server-side HTTPS migration (issue #12).
+- Firmware comes over HTTPS from `updater.flowtoys.com/firmware/` (`Source/FirmwareCatalog.h`). Self-update (`update.json`, `/fusion/app/`) is still plain HTTP on flow-toys.com, so `NSAllowsArbitraryLoads` must stay until that moves (issue #12). Fielded installs still read `http://flow-toys.com/fusion/*`; keep it serving.
 - The version number lives ONLY in `CMakeLists.txt` `project(VERSION)`, bumped by release-please (never by hand); release tags `vX.Y.Z` must equal it (CI enforces).
 
 ## Workflow
@@ -47,4 +47,4 @@ A failed hardware check sends the task back to `🔨`, and its fix goes in a new
 
 ## Testing limits
 
-Anything touching `hid_*` or the flash state machine cannot be verified without physical props (Capsule 2.0 / Vision). Say so explicitly rather than claiming verification. UI can be walked without hardware via Cmd+N (Debug builds). The firmware download path can be verified live — the production server is up and serves the full catalog.
+Anything touching `hid_*` or the flash state machine cannot be verified without physical props (Capsule 2.0 / Vision). Say so explicitly rather than claiming verification. UI can be walked without hardware via Cmd+N (Debug builds). The firmware download path can be verified live — `https://updater.flowtoys.com/firmware/index.json` serves the full catalog.

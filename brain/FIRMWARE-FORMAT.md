@@ -27,16 +27,29 @@ A file that is not a zip, lacks either entry, or whose `meta` is not a JSON **ob
 
 ## Server index
 
-The app mirrors firmware from `http://flow-toys.com/fusion/`:
+From the release after 1.2.1, the app mirrors firmware from the web updater's catalog, over HTTPS
+(`Source/FirmwareCatalog.h`, `FirmwareManager::run`):
 
-- **Index**: `GET /fusion/firmwares.php` returns
+- **Index**: `GET https://updater.flowtoys.com/firmware/index.json` (S3 + CloudFront, 60 s cache):
   ```jsonc
-  { "clear": false, "files": ["flowOS 2.10-spin17-e.fwimg", "..."] }
+  { "schema": 1, "generated": "…", "firmware": [
+    { "file": "flowOS 2.10-spin17-e.fwimg", "size": 66230, "sha256": "<lowercase hex>",
+      "vid": 61703, "pid": 4097, "hw_rev": 1280, "fw_rev": 522, "fw_ident": "flowOS/spin17", "…": "…" } ] }
   ```
-  `clear: true` makes clients delete their entire local cache before re-downloading (use with care — this is an unauthenticated HTTP endpoint; see issue #12).
-- **Files**: each name in `files` is fetched from `/fusion/firmwares/<url-escaped name>`.
+  The app reads only `file`, `size` and `sha256` and ignores other keys. Anything but `schema: 1`, a
+  file name that isn't a plain `*.fwimg` name in one path segment, or a missing size or sha256
+  rejects the whole index; the app then uses its local cache.
+- **Files**: `GET https://updater.flowtoys.com/firmware/<encodeURIComponent(file)>`. Names are
+  immutable, so a cached file with the index's size and sha256 is current; any other cached or
+  downloaded file is deleted and fetched again.
+- There is no `clear` flag any more.
 
-Files are cached in `userApplicationDataDirectory/FlowtoysFirmwares` (macOS: `~/Library/FlowtoysFirmwares`), revalidated on launch and hourly. Files already present and parseable are not re-downloaded. Users can also flash a local `.fwimg` via "Choose local file" — the same parser and hardware checks apply, with an override prompt for hardware-revision mismatches.
+**1.2.1 and older** read `http://flow-toys.com/fusion/firmwares.php`
+(`{"files": [...], "clear": false}`) and `/fusion/firmwares/<name>` over plain HTTP. Those URLs are
+compiled into fielded installs, so `flow-toys.com/fusion/*` must keep serving the same catalog for as
+long as old installs matter, wherever it is hosted.
+
+Files are cached in `userApplicationDataDirectory/FlowtoysFirmwares` (macOS: `~/Library/FlowtoysFirmwares`), revalidated on launch and hourly. Users can also flash a local `.fwimg` via "Choose local file" — the same parser and hardware checks apply, with an override prompt for hardware-revision mismatches.
 
 ## Conventions observed in production filenames
 

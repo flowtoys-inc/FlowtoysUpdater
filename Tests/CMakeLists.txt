@@ -12,7 +12,8 @@ target_sources(FlowtoysUpdaterTests PRIVATE
     VersionUtilsTests.cpp
     FirmwareImageTests.cpp
     PropConstantsTests.cpp
-    FlashOutcomeTests.cpp)
+    FlashOutcomeTests.cpp
+    FirmwareCatalogTests.cpp)
 
 target_include_directories(FlowtoysUpdaterTests PRIVATE ${CMAKE_SOURCE_DIR}/Source)
 
