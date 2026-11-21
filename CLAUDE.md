@@ -32,6 +32,19 @@ If only Command Line Tools are selected on the machine, prefix with
 - `master` is the only long-lived branch (the old `modernize` integration branch was merged in for 1.2.0 and retired). All work lands via squash-merged PRs from feature branches into `master`.
 - GitHub Actions are pinned to commit SHAs (version in a trailing comment); dependabot maintains pins + submodules.
 
+## Session titles
+
+Title each Claude session by its task's state, so the sidebar shows where every task stands, and retitle the session whenever the state changes:
+
+| State | Session title |
+|---|---|
+| A session is working on it | `🔨 <task name>` |
+| A product or design question waits on someone | `❓ <task name>` |
+| Merged, waiting for a hardware check on real props (see Testing limits) | `⏳ verify · <task name> · #<PR>` |
+| Checked and done | `✅ <task name>` |
+
+A failed hardware check sends the task back to `🔨`, and its fix goes in a new PR.
+
 ## Testing limits
 
 Anything touching `hid_*` or the flash state machine cannot be verified without physical props (Capsule 2.0 / Vision). Say so explicitly rather than claiming verification. UI can be walked without hardware via Cmd+N (Debug builds). The firmware download path can be verified live — the production server is up and serves the full catalog.
