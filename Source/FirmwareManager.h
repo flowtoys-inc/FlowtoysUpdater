@@ -13,6 +13,7 @@
 #include "PropConstants.h"
 #include "QueuedNotifier.h"
 #include "FirmwareImage.h"
+#include "FirmwareCatalog.h"
 #include "VersionUtils.h"
 
 class Firmware
@@ -81,9 +82,11 @@ public:
 
 	FirmwareComparator comparator;
 
-	const String remoteHost = "http://flow-toys.com/fusion/";
 	File firmwareFolder;
 	OwnedArray<URL::DownloadTask> tasks;
+	Array<FirmwareCatalog::Entry> taskEntries; //parallel to tasks: what each download must match
+
+	static bool fileMatchesEntry(const File& f, const FirmwareCatalog::Entry& e);
 
 	//shared_ptr everywhere: the hourly refresh clears the list from the
 	//background thread while the UI (and a running flash) may still hold
