@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.2.2](https://github.com/flowtoys-inc/FlowtoysUpdater/compare/v1.2.1...v1.2.2) (2026-11-24)
+
+
+### Bug Fixes
+
+* confirm Capsule flashes by reading back the app version ([#56](https://github.com/flowtoys-inc/FlowtoysUpdater/issues/56)) ([00c8ebf](https://github.com/flowtoys-inc/FlowtoysUpdater/commit/00c8ebf55f607dbfad2848ffbcc713bfda02e034))
+* download firmware over HTTPS from updater.flowtoys.com ([#58](https://github.com/flowtoys-inc/FlowtoysUpdater/issues/58)) ([cb80fb8](https://github.com/flowtoys-inc/FlowtoysUpdater/commit/cb80fb862e45a3503ae16f742eae20639119c8ae))
+
+
+### Documentation
+
+* publish desktop releases to S3, not cPanel ([#60](https://github.com/flowtoys-inc/FlowtoysUpdater/issues/60)) ([de5c339](https://github.com/flowtoys-inc/FlowtoysUpdater/commit/de5c33926da20a4b11a255e893d2197002f8c596))
+* title Claude sessions by task state ([#59](https://github.com/flowtoys-inc/FlowtoysUpdater/issues/59)) ([aeac899](https://github.com/flowtoys-inc/FlowtoysUpdater/commit/aeac899dc9cfa6c273053ae7d07bd47cb520c54d))
+
 ## [1.2.1](https://github.com/flowtoys-inc/FlowtoysUpdater/compare/1.2.0...v1.2.1) (2026-11-17)
 
 
