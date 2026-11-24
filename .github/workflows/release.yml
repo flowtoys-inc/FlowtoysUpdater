@@ -11,8 +11,8 @@
 # macOS signing + notarization run only when the corresponding secrets
 # exist (see brain/RELEASING.md); without them the release is unsigned,
 # which works for right-click-open installs but is Gatekeeper-blocked
-# on normal download. Publishing to flow-toys.com (and updating the
-# server's update.json) remains a manual step.
+# on normal download. Publishing to flow-toys.com (the installers and
+# update.json, on S3) remains a manual step (brain/RELEASING.md).
 #
 # Tags pushed by hand don't trigger anything: release-please owns versions
 # and tags (brain/RELEASING.md).

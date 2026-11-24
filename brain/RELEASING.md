@@ -26,9 +26,25 @@ Every part of the pipeline — the CMake project version, the git tag, the CI ar
    - signs/notarizes the macOS artifacts **only if signing secrets are configured** (below),
    - attaches all artifacts to the GitHub Release.
 5. **Smoke-test on hardware** — flash a real prop with the built app. CI cannot test the HID path.
-6. **Publish to flow-toys.com** (manual until server automation exists):
-   - upload the artifacts to `http://flow-toys.com/fusion/app/`,
-   - update `http://flow-toys.com/fusion/update.json` (schema below). Existing installs poll this file — nothing reaches users until it changes.
+6. **Publish to flow-toys.com** (manual). `flow-toys.com/fusion/*` is served from an S3 bucket behind a CloudFront distribution (`www.flow-toys.com`; the bare `flow-toys.com` redirects there over plain HTTP). It needs AWS credentials that can write to the bucket's `fusion/` prefix and invalidate the distribution. In this order:
+   1. upload the four artifacts from the GitHub Release to `s3://<bucket>/fusion/app/`, keeping their names,
+   2. upload the new `update.json` (schema below) **last**, because existing installs poll it and nothing reaches users until it changes,
+   3. invalidate it, so installs see it within a minute rather than after the cache expires.
+
+   ```sh
+   v=x.y.z
+   for f in FlowtoysUpdater-osx-$v.zip FlowtoysUpdater-osx-$v.pkg FlowtoysUpdater-win-x64-$v.exe FlowtoysUpdater-linux-$v.zip; do
+     aws s3 cp "$f" "s3://<bucket>/fusion/app/$f"
+   done
+   aws s3 cp update.json s3://<bucket>/fusion/update.json \
+     --content-type application/json --cache-control "public, max-age=60"
+   dist=$(aws cloudfront list-distributions --output text \
+     --query "DistributionList.Items[?Aliases.Items && contains(Aliases.Items, 'www.flow-toys.com')].Id")
+   aws cloudfront create-invalidation --distribution-id "$dist" --paths /fusion/update.json
+   curl -s http://flow-toys.com/fusion/update.json -L | grep '"version"'   # the new version
+   ```
+
+   Edit `update.json` from the copy that's live (`curl -sL http://flow-toys.com/fusion/update.json`), not from an old local file. Never delete the old installers: the names are what older `update.json` copies point at.
 7. **Update the user-facing download links** if they name a version: the Freshdesk help articles listed in [DISTRIBUTION.md](DISTRIBUTION.md). Edit them in place, because the app links to them by URL.
 
 ## update.json schema (what the client actually reads)

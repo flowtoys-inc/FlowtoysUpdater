@@ -17,7 +17,7 @@ Users reach the updater through this chain, and every link in it is maintained b
    | Firmware updater troubleshooting | `6000216768` | text only; tells Mac users to right-click → Open |
 
    The app itself opens `6000213534`, `6000213554` and the reset articles `6000232163` (Capsule) and `6000202797` (Vision) (`Source/PropConnectScreen.cpp`, `Source/FirmwareChooserScreen.cpp`). `6000216768` is also compiled in but always overwritten before opening, so it is unreachable. Those URLs are compiled into every fielded app, so **edit these articles in place. Never delete them or replace them with new ones.** Freshdesk resolves an article by its numeric ID, so renaming the title doesn't break links.
-3. **flow-toys.com** (GoDaddy cPanel). It serves only the app's machine endpoints: `/fusion/update.json`, `/fusion/app/` (installers for the self-updater) and the firmware files. The site root returns 403 and HTTPS has a self-signed certificate, so it isn't a page users can be sent to.
+3. **flow-toys.com** (since 2026-11-24 an S3 bucket behind CloudFront, as `www.flow-toys.com`; the bare domain redirects there over plain HTTP. It was GoDaddy cPanel before). It serves only the app's machine endpoints: `/fusion/update.json`, `/fusion/app/` (installers for the self-updater) and the firmware list and files. Other paths on `www` redirect to `https://updater.flowtoys.com`, so it isn't a page users need to be sent to.
 4. **GitHub Releases** (`https://github.com/flowtoys-inc/FlowtoysUpdater/releases`). The repo is public. Every release has the signed and notarized Mac `.pkg`/`.zip`, the Windows `.exe` and the Linux `.zip`.
 
 So a new user installs **1.1.9**, which is unsigned. On a Mac that means the Gatekeeper right-click dance, and on Windows a SmartScreen warning. The app then self-updates to 1.2.0 via `update.json`. On Mac that self-update has been confirmed; on Windows it is untested.
@@ -35,7 +35,7 @@ Edit the Freshdesk articles and keep their URLs:
 - **Vision article.** Remove "this version says 1.1.3".
 - **Windows article.** It's an attachment-only stub; put the direct link in it.
 
-Nothing on cPanel has to change for Step 1. `update.json` and `/fusion/app/` already serve 1.2.0 to existing installs.
+Nothing on flow-toys.com has to change for Step 1. `update.json` and `/fusion/app/` already serve 1.2.0 to existing installs.
 
 ## Step 2: links that never go stale (small CI change)
 
